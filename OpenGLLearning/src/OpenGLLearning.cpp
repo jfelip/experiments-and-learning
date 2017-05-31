@@ -7,8 +7,8 @@
 //============================================================================
 
 //TODO LIST!!
-//TODO: Add option for vertex normal visualization
 //TODO: Add option for face normal visualization
+//TODO: Orbit-like navigation
 
 #include <iostream>
 
@@ -24,6 +24,7 @@
 #include <CGLCamera.hpp>
 #include <Material.hpp>
 #include <CGLLight.hpp>
+#include <CVector3.hpp>
 
 
 // Function prototypes
@@ -83,11 +84,19 @@ int main()
     glEnable(GL_DEPTH_TEST);
 
     // Build and compile our shader program
+    std::string shaderPath = "/home/labuser/workspace/experiments-and-learning/OpenGLLearning/shaders/";
     Shader ourShader
 	(
-    		"/home/labuser/workspace/experiments-and-learning/OpenGLLearning/shaders/indicesTextureColorNormal.vs",
-			"/home/labuser/workspace/experiments-and-learning/OpenGLLearning/shaders/indicesTextureColorNormal.geom",
-    		"/home/labuser/workspace/experiments-and-learning/OpenGLLearning/shaders/indicesTextureColorNormal.frag"
+			shaderPath + "indicesTextureColorNormal.vs",
+			"",
+			shaderPath + "indicesTextureColorNormal.frag"
+	);
+
+    Shader normalShader
+	(
+			shaderPath + "normalVisualization.vs",
+			shaderPath + "normalVisualization.geom",
+			shaderPath + "normalVisualization.frag"
 	);
 
     CTransform<GLfloat> t_object;
@@ -145,6 +154,8 @@ int main()
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
         glUniform3f(viewPosLoc, camera.Position.x(), camera.Position.y(), camera.Position.z());
 
+
+
     	//Prepare lights
     	dirLight.use(&ourShader);
 
@@ -154,6 +165,22 @@ int main()
     		//Draw geometry
     		s.draw(&ourShader);
     		floor.draw(&ourShader);
+
+
+		normalShader.Use();
+		// Pass view and projection matrices to the normal shader and viewer position
+		viewLoc = glGetUniformLocation(normalShader.Program, "view");
+		projLoc = glGetUniformLocation(normalShader.Program, "projection");
+		viewPosLoc = glGetUniformLocation(normalShader.Program, "viewPos");
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, view);
+		glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
+		glUniform3f(viewPosLoc, camera.Position.x(), camera.Position.y(), camera.Position.z());
+
+		//TODO: Loop through objects and materials to render the second pass the normals
+    		//Prepare material used by the rendered object
+
+			s.draw(&normalShader);
+    		floor.draw(&normalShader);
 
         // Swap the screen buffers
         glfwSwapBuffers(window);
