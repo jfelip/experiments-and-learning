@@ -85,9 +85,9 @@ int main()
     // Build and compile our shader program
     Shader ourShader
 	(
-    		"/home/jfelip/workspace/OpenGLLearning/shaders/indicesTextureColorNormal.vs",
-			"/home/jfelip/workspace/OpenGLLearning/shaders/indicesTextureColorNormal.geom",
-    		"/home/jfelip/workspace/OpenGLLearning/shaders/indicesTextureColorNormal.frag"
+    		"/home/labuser/workspace/experiments-and-learning/OpenGLLearning/shaders/indicesTextureColorNormal.vs",
+			"/home/labuser/workspace/experiments-and-learning/OpenGLLearning/shaders/indicesTextureColorNormal.geom",
+    		"/home/labuser/workspace/experiments-and-learning/OpenGLLearning/shaders/indicesTextureColorNormal.frag"
 	);
 
     CTransform<GLfloat> t_object;

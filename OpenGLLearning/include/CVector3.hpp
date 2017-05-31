@@ -1,6 +1,8 @@
 #ifndef _CVECTOR3_H_
 #define _CVECTOR3_H_
 
+#include <ostream>
+
 namespace vec3
 {
 

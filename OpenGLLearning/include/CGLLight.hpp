@@ -93,6 +93,7 @@ public:
 
 };
 
+//TODO: Implement point lights
 template <class T_Real=float>
 class CPointLight
 {
@@ -116,6 +117,7 @@ public:
 };
 
 
+//TODO: Implement spot lights
 template <class T_Real=float>
 class CSpotLight
 {
