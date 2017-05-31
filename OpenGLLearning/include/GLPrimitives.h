@@ -1,17 +1,19 @@
 #include <GLGeometry.h>
 #include <math.h>
+#include <memory>
+#include <vector>
 
-//TODO: SolidCone
-//TODO: SolidMesh
 //TODO: ReferenceFrame
 //TODO: Arrow
 //TODO: 2DText
 //TODO: Camera
 //TODO: Light
 //TODO: PointCloud
+//TODO: ParticleSystem
+//TODO: SolidMesh
 
 
-template<typename T_real=float, typename T_integer=int>
+template<typename T_real=GLfloat, typename T_integer=GLuint>
 class CSolidSphere
 {
 
@@ -21,7 +23,7 @@ class CSolidSphere
 
 
 protected:
-	COpenGLGeometry<T_real> m_geom;
+	COpenGLGeometry<T_real,T_real,T_integer> m_geom;
 	T_real m_radius;
 	T_integer m_alpha_resolution;
 	T_integer m_beta_resolution;
@@ -48,20 +50,20 @@ public:
 
     void generateVertexData()
     {
-    	std::vector<GLfloat> vertices;
-    	std::vector<GLuint> indices;
-    	std::vector<GLfloat> normals;
-    	std::vector<GLfloat> colors;
-    	std::vector<GLfloat> textureCoords;
+    	std::vector<T_real> vertices;
+    	std::vector<T_integer> indices;
+    	std::vector<T_real> normals;
+    	std::vector<T_real> colors;
+    	std::vector<T_real> textureCoords;
 
-    	GLfloat x, y, z, alpha, beta; // Storage for coordinates and angles
-    	GLfloat radius = m_radius;
-    	GLuint idx = 0;
+    	T_real x, y, z, alpha, beta; // Storage for coordinates and angles
+    	T_real radius = m_radius;
+    	T_integer idx = 0;
 
-    	GLfloat alpha_incr = M_PI/m_alpha_resolution;
-    	GLfloat beta_incr  = M_PI/m_beta_resolution;
-    	GLuint M_PI2 = 2*M_PI+alpha_incr;
-    	GLuint M_PI1 = M_PI+beta_incr;
+    	T_real alpha_incr = M_PI/m_alpha_resolution;
+    	T_real beta_incr  = M_PI/m_beta_resolution;
+    	T_integer M_PI2 = 2*M_PI+alpha_incr;
+    	T_integer M_PI1 = M_PI+beta_incr;
 
     	//TODO: Correct sphere vertices generation
     	for (alpha = 0.0; alpha < M_PI1; alpha +=alpha_incr)
@@ -111,7 +113,7 @@ class CSolidBox
 	typedef std::shared_ptr<CSolidBox> ConstPtr;
 
 protected:
-	COpenGLGeometry<T_real> m_geom;
+	COpenGLGeometry<T_real,T_real,T_integer> m_geom;
 	T_real m_dim[3];
 
 public:
@@ -131,11 +133,11 @@ public:
 
     void generateVertexData()
     {
-    	std::vector<GLfloat> vertices;
-    	std::vector<GLuint> indices;
-    	std::vector<GLfloat> normals;
-    	std::vector<GLfloat> colors;
-    	std::vector<GLfloat> textureCoords;
+    	std::vector<T_real> vertices;
+    	std::vector<T_integer> indices;
+    	std::vector<T_real> normals;
+    	std::vector<T_real> colors;
+    	std::vector<T_real> textureCoords;
 
     	vertices = { 			1, 1, 1,  -1, 1, 1,  -1,-1, 1,   1,-1, 1,   // v0,v1,v2,v3 (front)
     	                        1, 1, 1,   1,-1, 1,   1,-1,-1,   1, 1,-1,   // v0,v3,v4,v5 (right)
@@ -194,7 +196,7 @@ public:
     }
 };
 
-template<typename T_real=float, typename T_integer=int>
+template<typename T_real=GLfloat, typename T_integer=GLuint>
 class CSolidCylinder
 {
 
@@ -205,7 +207,7 @@ class CSolidCylinder
 
 
 protected:
-	COpenGLGeometry<T_real> m_geom;
+	COpenGLGeometry<T_real,T_real,T_integer> m_geom;
 	T_real m_radius;
 	T_real m_height;
 	T_integer m_resolution;
@@ -232,19 +234,19 @@ public:
     //TODO:Fix extra faces generated
     void generateVertexData()
     {
-    	std::vector<GLfloat> vertices;
-    	std::vector<GLuint> indices;
-    	std::vector<GLfloat> normals;
-    	std::vector<GLfloat> colors;
-    	std::vector<GLfloat> textureCoords;
+    	std::vector<T_real> vertices;
+    	std::vector<T_integer> indices;
+    	std::vector<T_real> normals;
+    	std::vector<T_real> colors;
+    	std::vector<T_real> textureCoords;
 
     	////////////////////////////
     	// DRAW THE SIDES
     	////////////////////////////
-    	GLfloat x, y, z, alpha; // Storage for coordinates and angles
-    	GLfloat incr = M_PI/m_resolution;
-    	GLfloat M_PI2 = 2*M_PI + incr;
-    	GLuint idx = 0;
+    	T_real x, y, z, alpha; // Storage for coordinates and angles
+    	T_real incr = M_PI/m_resolution;
+    	T_real M_PI2 = 2*M_PI + incr;
+    	T_integer idx = 0;
     	for (alpha = 0.0; alpha < M_PI2; alpha += incr)
     	{
     	        x = m_radius*sin(alpha);
@@ -338,7 +340,7 @@ public:
 };
 
 
-template<typename T_real=float, typename T_integer=int>
+template<typename T_real=GLfloat, typename T_integer=GLuint>
 class CSolidCapsule
 {
 
@@ -349,7 +351,7 @@ class CSolidCapsule
 
 
 protected:
-	COpenGLGeometry<T_real> m_geom;
+	COpenGLGeometry<T_real,T_real,T_integer> m_geom;
 	T_real m_radius;
 	T_real m_height;
 	T_integer m_resolution;
@@ -376,16 +378,16 @@ public:
     //TODO:Fix internal extra faces generated
     void generateVertexData()
     {
-    	std::vector<GLfloat> vertices;
-    	std::vector<GLuint> indices;
-    	std::vector<GLfloat> normals;
-    	std::vector<GLfloat> colors;
-    	std::vector<GLfloat> textureCoords;
+    	std::vector<T_real> vertices;
+    	std::vector<T_integer> indices;
+    	std::vector<T_real> normals;
+    	std::vector<T_real> colors;
+    	std::vector<T_real> textureCoords;
 
-    	GLfloat x, y, z, alpha,beta; // Storage for coordinates and angles
-    	GLfloat incr = M_PI/m_resolution;
-    	GLfloat M_PI2 = 2*M_PI + incr;
-    	GLuint idx = 0;
+    	T_real x, y, z, alpha,beta; // Storage for coordinates and angles
+    	T_real incr = M_PI/m_resolution;
+    	T_real M_PI2 = 2*M_PI + incr;
+    	T_integer idx = 0;
 
     	////////////////////////////
 		// DRAW THE TOP CAP
@@ -491,5 +493,117 @@ public:
     	m_geom.draw(s);
     }
 };
+
+
+template<typename T_real=GLfloat, typename T_integer=GLuint>
+class CSolidCone
+{
+
+	typedef std::shared_ptr<CSolidCone> Ptr;
+
+	typedef std::shared_ptr<CSolidCone> ConstPtr;
+
+
+
+protected:
+	COpenGLGeometry<T_real,T_real,T_integer> m_geom;
+	T_real m_radius;
+	T_real m_height;
+	T_integer m_resolution;
+
+public:
+	CSolidCone(T_real radius, T_real height, const CTransform<T_real>& t, T_integer resolution=20)
+    {
+    	m_radius = radius;
+    	m_height = height;
+    	m_resolution = resolution;
+    	setTransform(t);
+    	generateVertexData();
+    }
+
+    void setRadius(T_real r){m_radius = r;}
+    void setResolution(T_integer resolution){m_resolution = resolution;}
+    void setTransform( const CTransform<T_real>& transform ) { m_geom.setTransform(transform);}
+
+    T_real getRadius(){return m_radius;}
+    T_integer getResolution(){return m_resolution;}
+    CTransform<T_real>& getTransform() {return m_geom.getTransform();}
+
+    void generateVertexData()
+    {
+    	std::vector<T_real> vertices;
+    	std::vector<T_integer> indices;
+    	std::vector<T_real> normals;
+    	std::vector<T_real> colors;
+    	std::vector<T_real> textureCoords;
+
+    	T_real x, y, z, alpha; // Storage for coordinates and angles
+    	T_real incr = M_PI/m_resolution;
+    	T_real M_PI2 = 2*M_PI + incr;
+    	T_integer idx = 0;
+
+    	////////////////////////////
+    	// DRAW THE CAP
+    	////////////////////////////
+    	for (alpha = 0.0; alpha < M_PI2; alpha += incr)
+    	{
+    	        x = m_radius*sin(alpha);
+    	        y = m_radius*cos(alpha);
+    	        z = 0;
+    	        vertices.push_back(x);
+    	        vertices.push_back(y);
+    	        vertices.push_back(z);
+    	        indices.push_back(idx); idx++;
+    	        normals.push_back(x);
+    	        normals.push_back(y);
+    	        normals.push_back(z);
+
+    	        vertices.push_back(0);
+    	        vertices.push_back(0);
+    	        vertices.push_back(0);
+    	        indices.push_back(idx); idx++;
+    	        normals.push_back(0);
+    	        normals.push_back(0);
+    	        normals.push_back(-1);
+    	}
+
+    	////////////////////////////
+    	// DRAW THE SIDES
+    	////////////////////////////
+    	for (alpha = 0.0; alpha < M_PI2; alpha += incr)
+    	{
+    	        x = m_radius*sin(alpha);
+    	        y = m_radius*cos(alpha);
+    	        z = 0;
+    	        vertices.push_back(x);
+    	        vertices.push_back(y);
+    	        vertices.push_back(z);
+    	        indices.push_back(idx); idx++;
+    	        normals.push_back(x);
+    	        normals.push_back(y);
+    	        normals.push_back(z);
+
+    	        vertices.push_back(0);
+    	        vertices.push_back(0);
+    	        vertices.push_back(m_height);
+    	        indices.push_back(idx); idx++;
+    	        normals.push_back(0);
+    	        normals.push_back(0);
+    	        normals.push_back(1);
+    	}
+
+    	m_geom.setDrawType(GL_TRIANGLE_STRIP);
+    	m_geom.setVertices(vertices);
+    	m_geom.setIndices(indices);
+    	m_geom.setNormals(normals);
+    	m_geom.updateBuffers();
+    }
+
+    void draw(Shader *s)
+    {
+    	m_geom.draw(s);
+    }
+};
+
 
 

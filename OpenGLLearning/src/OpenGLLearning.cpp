@@ -104,7 +104,8 @@ int main()
     CTransform<GLfloat> t_floor;
     CSolidBox<GLfloat> floor(10.0,10.0,0.1,t_floor);
     //CSolidCylinder<GLfloat> s(0.2,0.5,t);
-    CSolidCapsule<GLfloat> s(0.2,0.5,t_object);
+    //CSolidCapsule<GLfloat> s(0.2,0.5,t_object);
+    CSolidCone<GLfloat> s(0.2,0.5,t_object);
     CMaterial<GLfloat> mat;
     mat.setSpecular(1,1,1);
     mat.setDiffuse(0.5,0.0,0.0);
