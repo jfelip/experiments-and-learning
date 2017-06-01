@@ -92,7 +92,7 @@ void main()
     	if (spotLightEnabled[i])
     		result += CalcSpotLight(spotLights[i], norm, fs_in.FragPos, viewDir);
 
-    // Add vertex-wise color
+    //TODO: Add vertex-wise color
     //result *= fs_in.ourColor;
 
     color = vec4(result, 1.0);

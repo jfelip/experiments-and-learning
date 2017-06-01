@@ -4,7 +4,6 @@
 #include <vector>
 
 //TODO: ReferenceFrame
-//TODO: Arrow
 //TODO: 2DText
 //TODO: Camera
 //TODO: Light
@@ -29,7 +28,7 @@ protected:
 	T_integer m_beta_resolution;
 
 public:
-	CSolidSphere(T_real radius, const CTransform<T_real>& t, T_integer alpha_resolution=20, T_integer beta_resolution=20)
+	CSolidSphere(T_real radius=1.0, const CTransform<T_real>& t=CTransform<T_real>(), T_integer alpha_resolution=20, T_integer beta_resolution=20)
     {
     	m_radius = radius;
     	m_alpha_resolution = alpha_resolution;
@@ -117,7 +116,7 @@ protected:
 	T_real m_dim[3];
 
 public:
-    CSolidBox(T_real d_x,T_real d_y,T_real d_z, const CTransform<T_real>& t)
+    CSolidBox(T_real d_x=1.0,T_real d_y=1.0,T_real d_z=1.0, const CTransform<T_real>& t=CTransform<T_real>())
     {
     	m_dim[0] = d_x;
     	m_dim[1] = d_y;
@@ -213,7 +212,7 @@ protected:
 	T_integer m_resolution;
 
 public:
-    CSolidCylinder(T_real radius, T_real height, const CTransform<T_real>& t, T_integer resolution=20)
+    CSolidCylinder(T_real radius=1.0, T_real height=1.0, const CTransform<T_real>& t=CTransform<T_real>(), T_integer resolution=20)
     {
     	m_radius = radius;
     	m_height = height;
@@ -222,14 +221,18 @@ public:
     	generateVertexData();
     }
 
-    void setRadius(T_real r){m_radius = r;}
+    void setRadius(const T_real& r){m_radius = r;}
+    void setHeight(const T_real& h){m_height = h;}
     void setResolution(T_integer resolution){m_resolution = resolution;}
     void setTransform( const CTransform<T_real>& transform ) { m_geom.setTransform(transform);}
 
     T_real getRadius(){return m_radius;}
+    T_real getHeight(){return m_height;}
     T_integer getResolution(){return m_resolution;}
     CTransform<T_real>& getTransform() {return m_geom.getTransform();}
 
+    void rotate (const T_real r[4])		{m_geom.rotate(r);}
+    void translate (const T_real t[4])	{m_geom.translate(t);}
 
     //TODO:Fix extra faces generated
     void generateVertexData()
@@ -357,7 +360,7 @@ protected:
 	T_integer m_resolution;
 
 public:
-	CSolidCapsule(T_real radius, T_real height, const CTransform<T_real>& t, T_integer resolution=20)
+	CSolidCapsule(T_real radius=1.0, T_real height=1.0, CTransform<T_real> t=CTransform<T_real>(), T_integer resolution=20)
     {
     	m_radius = radius;
     	m_height = height;
@@ -366,11 +369,13 @@ public:
     	generateVertexData();
     }
 
-    void setRadius(T_real r){m_radius = r;}
+    void setRadius(const T_real& r){m_radius = r;}
+    void setHeight(const T_real& h){m_height = h;}
     void setResolution(T_integer resolution){m_resolution = resolution;}
     void setTransform( const CTransform<T_real>& transform ) { m_geom.setTransform(transform);}
 
     T_real getRadius(){return m_radius;}
+    T_real getHeight(){return m_height;}
     T_integer getResolution(){return m_resolution;}
     CTransform<T_real>& getTransform() {return m_geom.getTransform();}
 
@@ -503,8 +508,6 @@ class CSolidCone
 
 	typedef std::shared_ptr<CSolidCone> ConstPtr;
 
-
-
 protected:
 	COpenGLGeometry<T_real,T_real,T_integer> m_geom;
 	T_real m_radius;
@@ -512,7 +515,7 @@ protected:
 	T_integer m_resolution;
 
 public:
-	CSolidCone(T_real radius, T_real height, const CTransform<T_real>& t, T_integer resolution=20)
+	CSolidCone(T_real radius=1.0, T_real height=1.0, CTransform<T_real> t=CTransform<T_real>(), T_integer resolution=20)
     {
     	m_radius = radius;
     	m_height = height;
@@ -521,13 +524,19 @@ public:
     	generateVertexData();
     }
 
-    void setRadius(T_real r){m_radius = r;}
+    void setRadius(const T_real& r){m_radius = r;}
+    void setHeight(const T_real& h){m_height = h;}
     void setResolution(T_integer resolution){m_resolution = resolution;}
     void setTransform( const CTransform<T_real>& transform ) { m_geom.setTransform(transform);}
 
     T_real getRadius(){return m_radius;}
+    T_real getHeight(){return m_height;}
     T_integer getResolution(){return m_resolution;}
     CTransform<T_real>& getTransform() {return m_geom.getTransform();}
+
+    void rotate (const T_real r[4])		{m_geom.rotate(r);}
+
+    void translate (const T_real t[3])	{m_geom.translate(t);}
 
     void generateVertexData()
     {
@@ -568,7 +577,7 @@ public:
     	}
 
     	////////////////////////////
-    	// DRAW THE SIDES
+    	// DRAW THE CONE
     	////////////////////////////
     	for (alpha = 0.0; alpha < M_PI2; alpha += incr)
     	{
@@ -602,6 +611,171 @@ public:
     void draw(Shader *s)
     {
     	m_geom.draw(s);
+    }
+};
+
+
+template<typename T_real=GLfloat, typename T_integer=GLuint>
+class CSolidArrow
+{
+
+	typedef std::shared_ptr<CSolidArrow> Ptr;
+
+	typedef std::shared_ptr<CSolidArrow> ConstPtr;
+
+protected:
+	CSolidCone<T_real,T_integer> m_head;
+	CSolidCylinder<T_real,T_integer> m_body;
+
+public:
+	CSolidArrow(T_real head_radius=0.2, T_real head_height=0.2,T_real body_radius=0.1, T_real body_height=0.8, CTransform<T_real> t=CTransform<T_real>(), T_integer resolution=20)
+    {
+    	m_body.setRadius(body_radius);
+    	m_body.setHeight(body_height);
+    	m_body.setResolution(resolution);
+
+    	m_head.setRadius(head_radius);
+    	m_head.setHeight(head_height);
+    	m_head.setResolution(resolution);
+
+    	setTransform(t);
+    	generateVertexData();
+    }
+
+    void setBodyRadius(const T_real& r){m_body.setRadius(r);}
+
+    void setHeadRadius(const T_real& r){m_head.setRadius(r);}
+
+    void setBodyHeight(const T_real& h){m_body.setHeight(h);}
+
+    void setHeadHeight(const T_real& h){m_head.setHeight(h);}
+
+    void setResolution(const T_integer& resolution)
+    {
+    	m_body.setResolution(resolution);
+    	m_head.setResolution(resolution);
+    }
+
+    void setTransform( const CTransform<T_real>& transform )
+    {
+    	CTransform<T_real> t1;
+
+    	m_body.setTransform(transform);
+    	m_body.getTransform().translateZ(m_body.getHeight()*0.5);
+    	m_head.setTransform(transform);
+    	m_head.getTransform().translateZ(m_body.getHeight());
+    }
+
+    T_real getHeadRadius(){return m_head.getRadius();}
+
+    T_real getBodyRadius(){return m_body.getRadius();}
+
+    T_real getHeadHeight(){return m_head.getHeight();}
+
+    T_real getBodyHeight(){return m_body.getHeight();}
+
+    T_integer getResolution(){return m_body.getResolution();}
+
+    CTransform<T_real>& getTransform() {return m_body.getTransform();}
+
+    void generateVertexData()
+    {
+    	m_head.generateVertexData();
+    	m_body.generateVertexData();
+    }
+
+    void draw(Shader *s)
+    {
+    	m_head.draw(s);
+    	m_body.draw(s);
+    }
+};
+
+template<typename T_real=GLfloat, typename T_integer=GLuint>
+class CReferenceFrame
+{
+
+	typedef std::shared_ptr<CReferenceFrame> Ptr;
+
+	typedef std::shared_ptr<CReferenceFrame> ConstPtr;
+
+protected:
+	CSolidArrow<T_real,T_integer> m_xaxis;
+	CSolidArrow<T_real,T_integer> m_yaxis;
+	CSolidArrow<T_real,T_integer> m_zaxis;
+	CTransform<T_real> m_xaxis_transform;
+	CTransform<T_real> m_yaxis_transform;
+	T_real m_length;
+
+public:
+	CReferenceFrame(T_real length=1.0, CTransform<T_real> t=CTransform<T_real>(), T_integer resolution=20)
+    {
+		setLength(length);
+
+		//X is rotated pi/2 on y axis
+		m_xaxis_transform.m_pQua[1] = 0.70710678118;
+		m_xaxis_transform.m_pQua[3] = 0.70710678118;
+
+		//Y is rotated pi/2 on x axis
+		m_yaxis_transform.m_pQua[0] = 0.70710678118;
+		m_yaxis_transform.m_pQua[3] = 0.70710678118;
+
+    	setTransform(t);
+    	generateVertexData();
+    }
+
+	T_real getLenght(){ return m_length;}
+
+	void setLength(const T_real& len)
+	{
+		m_length = len;
+		m_xaxis.setHeadHeight(m_length*0.2);
+		m_xaxis.setHeadRadius(m_length*0.15);
+		m_xaxis.setBodyRadius(m_length*0.1);
+		m_xaxis.setBodyHeight(m_length*0.8);
+
+		m_yaxis.setHeadHeight(m_length*0.2);
+		m_yaxis.setHeadRadius(m_length*0.15);
+		m_yaxis.setBodyRadius(m_length*0.1);
+		m_yaxis.setBodyHeight(m_length*0.8);
+
+		m_zaxis.setHeadHeight(m_length*0.2);
+		m_zaxis.setHeadRadius(m_length*0.15);
+		m_zaxis.setBodyRadius(m_length*0.1);
+		m_zaxis.setBodyHeight(m_length*0.8);
+	}
+
+    void setResolution(const T_integer& resolution)
+    {
+    	m_xaxis.setResolution(resolution);
+    	m_yaxis.setResolution(resolution);
+    	m_zaxis.setResolution(resolution);
+    }
+
+    void setTransform( const CTransform<T_real>& transform )
+    {
+    	//NOTE: The cylinder and the cone are translated to have the origin of the arrow on its base
+    	m_xaxis.setTransform(transform * m_xaxis_transform);
+    	m_yaxis.setTransform(transform * m_yaxis_transform);
+    	m_zaxis.setTransform(transform);
+    }
+
+    T_integer getResolution(){return m_zaxis.getResolution();}
+
+    CTransform<T_real>& getTransform() {return m_zaxis.getTransform();}
+
+    void generateVertexData()
+    {
+    	m_xaxis.generateVertexData();
+    	m_yaxis.generateVertexData();
+    	m_zaxis.generateVertexData();
+    }
+
+    void draw(Shader *s)
+    {
+    	m_xaxis.draw(s);
+    	m_yaxis.draw(s);
+    	m_zaxis.draw(s);
     }
 };
 

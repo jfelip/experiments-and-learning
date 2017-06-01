@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <math.h>
+#include <CDualQuaternion.hpp>
 
 template<class T_real=double>
 class CTransform
@@ -13,7 +14,7 @@ class CTransform
 	typedef std::shared_ptr<CTransform> ConstPtr;
 
 public:
-	CTransform();
+	CTransform(){m_data.setIdentity();}
 
 	CTransform(const CTransform& r);
 
@@ -21,116 +22,30 @@ public:
 
 	CTransform& operator=(const CTransform& r);
 
-	CTransform& operator*(const CTransform& r);
+	CTransform operator*(const CTransform& r) const;
 
-	void computeMatrix();
+	void setIdentity(){m_data.setIdentity();}
 
-	void setIdentity();
+	void translate(const T_real t[3]);
 
-	T_real m_pPos[3];
+	void translateX(const T_real& tx);
 
-	T_real m_pQua[4];
+	void translateY(const T_real& ty);
 
-	T_real m_pMatrix[16];
+	void translateZ(const T_real& tz);
 
+	void rotate(const T_real r[4]);
+
+	void rotateX(const T_real& rx);
+
+	void rotateY(const T_real& ry);
+
+	void rotateZ(const T_real& rz);
+
+	CDualQuaternion<T_real> m_data;
 };
 
-template<class T>
-void CTransform<T>::computeMatrix()
-{
 
-    T norm = sqrt (m_pQua[0]*m_pQua[0] + m_pQua[1]*m_pQua[1] + m_pQua[2]*m_pQua[2] + m_pQua[3]* m_pQua[3] );
-
-    if (norm != 0)
-    {
-		m_pQua[0] /= norm;
-		m_pQua[1] /= norm;
-		m_pQua[2] /= norm;
-		m_pQua[3] /= norm;
-    }
-    else
-    {
-    	_GENERIC_ERROR_("Invalid quaternion. Using identity");
-    	m_pQua[0] = 0;
-    	m_pQua[1] = 0;
-    	m_pQua[2] = 0;
-    	m_pQua[3] = 1;
-    }
-
-    //(b,c,d,a)
-    //(0,1,2,3)
-
-	//Row 1 (0,0) (0,1) (0,2) (0,3)
-	m_pMatrix[0] = m_pQua[3]*m_pQua[3] + m_pQua[0]*m_pQua[0] - m_pQua[1]*m_pQua[1] - m_pQua[2]*m_pQua[2];
-	m_pMatrix[1] = 2*m_pQua[0]*m_pQua[1] - 2*m_pQua[3]*m_pQua[2];
-	m_pMatrix[2] = 2*m_pQua[0]*m_pQua[2] + 2*m_pQua[3]*m_pQua[1];
-	m_pMatrix[3] = 0;
-
-	//Column 2 (1,0) (1,1) (1,2) (1,3)
-	m_pMatrix[4] = 2*m_pQua[0]*m_pQua[1] + 2*m_pQua[3]*m_pQua[2];
-	m_pMatrix[5] = m_pQua[3]*m_pQua[3] - m_pQua[0]*m_pQua[0] + m_pQua[1]*m_pQua[1] - m_pQua[2]*m_pQua[2];
-	m_pMatrix[6] = 2*m_pQua[1]*m_pQua[2] - 2*m_pQua[3]*m_pQua[0];
-	m_pMatrix[7] = 0;
-
-	//Column 3 (2,0) (2,1) (2,2) (2,3)
-	m_pMatrix[8] =  2*m_pQua[0]*m_pQua[2] - 2*m_pQua[3]*m_pQua[1];
-	m_pMatrix[9] =  2*m_pQua[1]*m_pQua[2] + 2*m_pQua[3]*m_pQua[0];
-	m_pMatrix[10] = m_pQua[3]*m_pQua[3] - m_pQua[0]*m_pQua[0] - m_pQua[1]*m_pQua[1] + m_pQua[2]*m_pQua[2];
-	m_pMatrix[11] = 0;
-
-	//Column 4 (3,0) (3,1) (3,2) (3,3)
-	m_pMatrix[12] = m_pPos[0];
-	m_pMatrix[13] = m_pPos[1];
-	m_pMatrix[14] = m_pPos[2];
-	m_pMatrix[15] = 1;
-
-}
-
-template<class T>
-void CTransform<T>::setIdentity()
-{
-	//Row 1 (0,0) (0,1) (0,2) (0,3)
-	m_pMatrix[0] = 1;
-	m_pMatrix[1] = 0;
-	m_pMatrix[2] = 0;
-	m_pMatrix[3] = 0;
-	//Column 2 (1,0) (1,1) (1,2) (1,3)
-	m_pMatrix[4] = 0;
-	m_pMatrix[5] = 1;
-	m_pMatrix[6] = 0;
-	m_pMatrix[7] = 0;
-	//Column 3 (2,0) (2,1) (2,2) (2,3)
-	m_pMatrix[8] =  0;
-	m_pMatrix[9] =  0;
-	m_pMatrix[10] = 1;
-	m_pMatrix[11] = 0;
-	//Column 4 (3,0) (3,1) (3,2) (3,3)
-	m_pMatrix[12] = 0;
-	m_pMatrix[13] = 0;
-	m_pMatrix[14] = 0;
-	m_pMatrix[15] = 1;
-
-	m_pPos[0] = 0;
-	m_pPos[1] = 0;
-	m_pPos[2] = 0;
-
-	m_pQua[0] = 0;
-	m_pQua[1] = 0;
-	m_pQua[2] = 0;
-	m_pQua[3] = 1;
-}
-
-template<class T>
-CTransform<T>::CTransform()
-{
-	for(uint i=0 ; i<3; ++i)
-	{
-		m_pPos[i] = 0;
-		m_pQua[i] = 0;
-	}
-	m_pQua[3] = 1;
-	computeMatrix();
-}
 
 template<class T>
 CTransform<T>::~CTransform()
@@ -141,66 +56,83 @@ CTransform<T>::~CTransform()
 template<class T>
 CTransform<T>::CTransform(const CTransform& r)
 {
-	for(uint i=0 ; i<3; ++i)
-	{
-		m_pPos[i] = r.m_pPos[i];
-		m_pQua[i] = r.m_pQua[i];
-	}
-	m_pQua[3] = r.m_pQua[3];
-
-	computeMatrix();
-
+	*this = r;
 }
 
 
 template<class T>
 CTransform<T>& CTransform<T>::operator=(const CTransform<T>& r)
 {
-	for(uint i=0 ; i<3; ++i)
-	{
-		m_pPos[i] = r.m_pPos[i];
-		m_pQua[i] = r.m_pQua[i];
-	}
-	m_pQua[3] = r.m_pQua[3];
-
-	computeMatrix();
-
+	m_data = r.m_data;
 	return *this;
 }
 
 template<class T>
-CTransform<T>& CTransform<T>::operator*(const CTransform<T>& r)
+CTransform<T> CTransform<T>::operator*(const CTransform<T>& r) const
 {
-	CTransform c;
-
-	//Translation adds
-	for(uint i=0 ; i<3; ++i)
-	{
-		c.m_pPos[i] = m_pPos[i] + r.m_pPos[i];
-	}
-
-	//Quaternion product
-	c.m_pPos[0] =  m_pQua[0] * r.m_pQua[3] + m_pQua[1] * r.m_pQua[2] - m_pQua[2] * r.m_pQua[1] + m_pQua[3] * r.m_pQua[0];
-	c.m_pPos[1] = -m_pQua[0] * r.m_pQua[2] + m_pQua[1] * r.m_pQua[3] + m_pQua[2] * r.m_pQua[0] + m_pQua[3] * r.m_pQua[1];
-	c.m_pPos[2] =  m_pQua[0] * r.m_pQua[1] - m_pQua[1] * r.m_pQua[0] + m_pQua[2] * r.m_pQua[3] + m_pQua[3] * r.m_pQua[2];
-	c.m_pPos[3] = -m_pQua[0] * r.m_pQua[0] - m_pQua[1] * r.m_pQua[1] - m_pQua[2] * r.m_pQua[2] + m_pQua[3] * r.m_pQua[3];
-
-	c.computeMatrix();
-
-	return c;
+	return *this*r;
 }
 
 template<class T>
 std::ostream& operator<<(std::ostream& os, const CTransform<T>& t)
 {
-	os << t.m_pPos[0] << " " << t.m_pPos[1] << " " << t.m_pPos[2] << " " <<
-			t.m_pQua[0] << " " << t.m_pQua[1] << " " << t.m_pQua[2] << " " << t.m_pQua[3] <<std::endl;
-
-	for (uint i=0; i<16; i+=4)
-	{
-		os << t.m_pMatrix[i] << " " << t.m_pMatrix[i+1] << " " << t.m_pMatrix[i+2] << " " << t.m_pMatrix[i+3] << std::endl;
-	}
+	os << t.m_data;
 	return os;
+}
+
+
+//TODO: Implement this
+template<class T_real >
+void CTransform<T_real>::translate(const T_real t[3])
+{
+}
+
+template<class T_real >
+void CTransform<T_real>::translateX(const T_real& tx)
+{
+	T_real trans[3] = {tx,0,0};
+	translate(trans);
+}
+
+template<class T_real >
+void CTransform<T_real>::translateY(const T_real& ty)
+{
+	T_real trans[3] = {0,ty,0};
+	translate(trans);
+}
+
+template<class T_real >
+void CTransform<T_real>::translateZ(const T_real& tz)
+{
+	T_real trans[3] = {0,0,tz};
+	translate(trans);
+}
+
+//TODO: Implement this
+template<class T_real >
+void CTransform<T_real>::rotate(const T_real r[4])
+{
+}
+
+template<class T_real >
+void CTransform<T_real>::rotateX(const T_real& rx)
+{
+	T_real rxQuat[4] = {T_real(sin(rx * T_real(0.5))), T_real(0),T_real(0), T_real(cos(rx * T_real(0.5)))};
+	rotate(rxQuat);
+}
+
+template<class T_real >
+void CTransform<T_real>::rotateY(const T_real& ry)
+{
+	T_real ryQuat[4] = {0, sin(ry * T_real(0.5)), 0, cos(ry * T_real(0.5))};
+	rotate(ryQuat);
+}
+
+template<class T_real >
+void CTransform<T_real>::rotateZ(const T_real& rz)
+{
+	T_real rzQuat[4] = {0,0,sin(rz * T_real(0.5)), cos(rz * T_real(0.5))};
+	rotate(rzQuat);
 }
 
 
