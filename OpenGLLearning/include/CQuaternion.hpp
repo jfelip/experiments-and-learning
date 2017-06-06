@@ -4,7 +4,7 @@
 #include <Common.h>
 #include <memory>
 
-template<class T_real=double>
+template<class T_real=double >
 class CQuaternion
 {
 
@@ -14,17 +14,27 @@ public:
 
 	typedef std::shared_ptr<CQuaternion> ConstPtr;
 
-	CQuaternion(){setIdentity();}
+	CQuaternion(){}
 
 	CQuaternion(const CQuaternion<T_real>& rhs) { *this = rhs;}
+
+	CQuaternion(const T_real& x,const T_real& y,const T_real& z,const T_real& w)
+	{
+		m_data[0] = x;
+		m_data[1] = y;
+		m_data[2] = z;
+		m_data[3] = w;
+	}
 
 	~CQuaternion(){};
 
 	void setIdentity();
 
-	const T_real& operator()(const uint& idx) const {return m_data[idx];}
+	void setZero();
 
 	T_real& operator[](const uint& idx) {return m_data[idx];}
+
+	const T_real& operator[](const uint& idx) const {return m_data[idx];}
 
 	CQuaternion<T_real>& operator=(const CQuaternion<T_real>& rhs);
 
@@ -72,13 +82,22 @@ void CQuaternion<T_real>::setIdentity()
 	m_data[3] = T_real(1.0);
 }
 
+template<class T_real>
+void CQuaternion<T_real>::setZero()
+{
+	for (uint i=0; i<4; ++i)
+	{
+		m_data[i] = T_real(0.0);
+	}
+}
+
 
 template<class T_real>
 CQuaternion<T_real>& CQuaternion<T_real>::operator=(const CQuaternion<T_real>& rhs)
 {
 	for (uint i=0; i<4; ++i)
 	{
-		m_data[i] = rhs(i);
+		m_data[i] = rhs[i];
 	}
 	return *this;
 }
@@ -89,11 +108,10 @@ CQuaternion<T_real> CQuaternion<T_real>::operator+(const CQuaternion<T_real>& rh
 	CQuaternion<T_real> res;
 	for (uint i=0; i<4; ++i)
 	{
-		res[i] = *this[i] + rhs[i];
+		res[i] = (*this)[i] + rhs[i];
 	}
 	return res;
 }
-
 
 template<class T_real>
 CQuaternion<T_real> CQuaternion<T_real>::operator-(const CQuaternion<T_real>& rhs) const
@@ -101,20 +119,19 @@ CQuaternion<T_real> CQuaternion<T_real>::operator-(const CQuaternion<T_real>& rh
 	CQuaternion<T_real> res;
 	for (uint i=0; i<4; ++i)
 	{
-		res[i] = *this[i] - rhs[i];
+		res[i] = (*this)[i] - rhs[i];
 	}
 	return res;
 }
-
 
 template<class T_real>
 CQuaternion<T_real> CQuaternion<T_real>::operator*(const CQuaternion<T_real>& rhs) const
 {
 	CQuaternion<T_real> res;
-	res[0] =  m_data[0] * rhs(3) + m_data[1] * rhs(2) - m_data[2] * rhs(1) + m_data[3] * rhs(0);
-	res[1] = -m_data[0] * rhs(2) + m_data[1] * rhs(3) + m_data[2] * rhs(0) + m_data[3] * rhs(1);
-	res[2] =  m_data[0] * rhs(1) - m_data[1] * rhs(0) + m_data[2] * rhs(3) + m_data[3] * rhs(2);
-	res[3] = -m_data[0] * rhs(0) - m_data[1] * rhs(1) - m_data[2] * rhs(2) + m_data[3] * rhs(3);
+	res[0] =  m_data[0] * rhs[3] + m_data[1] * rhs[2] - m_data[2] * rhs[1] + m_data[3] * rhs[0];
+	res[1] = -m_data[0] * rhs[2] + m_data[1] * rhs[3] + m_data[2] * rhs[0] + m_data[3] * rhs[1];
+	res[2] =  m_data[0] * rhs[1] - m_data[1] * rhs[0] + m_data[2] * rhs[3] + m_data[3] * rhs[2];
+	res[3] = -m_data[0] * rhs[0] - m_data[1] * rhs[1] - m_data[2] * rhs[2] + m_data[3] * rhs[3];
 
 	return res;
 }

@@ -187,11 +187,11 @@ bool COpenGLGeometry<T_real,T_vertex,T_indices>::draw(Shader *shader)
 	m_transform.m_data.computeMatrix();
 
 	GLuint transformLoc = glGetUniformLocation(shader->Program, "model");
-	glUniformMatrix4fv(transformLoc, 1,GL_FALSE, getTransform().m_data.m_pMatrix);
+	glUniformMatrix4fv(transformLoc, 1,GL_FALSE, m_transform.m_data.m_pMatrix);
 
 	//TODO: Calculate the normal matrix to avoid the problem of scaling normals with not iso-scaling factors
 	GLuint transformNorm = glGetUniformLocation(shader->Program, "normalMatrix");
-	glUniformMatrix4fv(transformNorm, 1,GL_FALSE, getTransform().m_data.m_pMatrix);
+	glUniformMatrix4fv(transformNorm, 1,GL_FALSE, m_transform.m_data.m_pMatrix);
 
     glBindVertexArray(VAO);
     //TODO: Change the GL_UNSIGNED_INT type according to the T_index template

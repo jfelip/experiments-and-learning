@@ -6,7 +6,7 @@
 namespace vec3
 {
 
-template <class T_Real=double>
+template <class T_Real=double >
 class Vector3
 {
 public:

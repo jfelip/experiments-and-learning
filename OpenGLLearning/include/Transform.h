@@ -5,6 +5,7 @@
 #include <vector>
 #include <math.h>
 #include <CDualQuaternion.hpp>
+#include <CVector3.hpp>
 
 template<class T_real=double>
 class CTransform
@@ -14,19 +15,21 @@ class CTransform
 	typedef std::shared_ptr<CTransform> ConstPtr;
 
 public:
-	CTransform(){m_data.setIdentity();}
+	CTransform(){setIdentity();}
 
-	CTransform(const CTransform& r);
+	CTransform(CDualQuaternion<T_real> dq){ m_data = dq;}
 
-	~CTransform();
+	CTransform(const CTransform& r) {*this = r;}
+
+	~CTransform(){}
+
+	void setIdentity(){ m_data.setIdentity(); }
 
 	CTransform& operator=(const CTransform& r);
 
 	CTransform operator*(const CTransform& r) const;
 
-	void setIdentity(){m_data.setIdentity();}
-
-	void translate(const T_real t[3]);
+	void translate(const vec3::Vector3<T_real>& t);
 
 	void translateX(const T_real& tx);
 
@@ -34,7 +37,7 @@ public:
 
 	void translateZ(const T_real& tz);
 
-	void rotate(const T_real r[4]);
+	void rotate(const CQuaternion<T_real>& r);
 
 	void rotateX(const T_real& rx);
 
@@ -44,20 +47,6 @@ public:
 
 	CDualQuaternion<T_real> m_data;
 };
-
-
-
-template<class T>
-CTransform<T>::~CTransform()
-{
-
-}
-
-template<class T>
-CTransform<T>::CTransform(const CTransform& r)
-{
-	*this = r;
-}
 
 
 template<class T>
@@ -70,7 +59,7 @@ CTransform<T>& CTransform<T>::operator=(const CTransform<T>& r)
 template<class T>
 CTransform<T> CTransform<T>::operator*(const CTransform<T>& r) const
 {
-	return *this*r;
+	return CTransform<T>(m_data*r.m_data);
 }
 
 template<class T>
@@ -81,60 +70,67 @@ std::ostream& operator<<(std::ostream& os, const CTransform<T>& t)
 }
 
 
-//TODO: Implement this
 template<class T_real >
-void CTransform<T_real>::translate(const T_real t[3])
+void CTransform<T_real>::translate(const vec3::Vector3<T_real>& t)
 {
+	CQuaternion<T_real> r;
+	r.setIdentity();
+	CDualQuaternion<T_real> dQuat(r,t);
+	m_data = m_data * dQuat;
 }
 
 template<class T_real >
 void CTransform<T_real>::translateX(const T_real& tx)
 {
-	T_real trans[3] = {tx,0,0};
+	vec3::Vector3<T_real> trans(tx,0,0);
 	translate(trans);
 }
 
 template<class T_real >
 void CTransform<T_real>::translateY(const T_real& ty)
 {
-	T_real trans[3] = {0,ty,0};
+	vec3::Vector3<T_real> trans(0,ty,0);
 	translate(trans);
 }
 
 template<class T_real >
 void CTransform<T_real>::translateZ(const T_real& tz)
 {
-	T_real trans[3] = {0,0,tz};
+	vec3::Vector3<T_real> trans(0,0,tz);
 	translate(trans);
 }
 
-//TODO: Implement this
 template<class T_real >
-void CTransform<T_real>::rotate(const T_real r[4])
+void CTransform<T_real>::rotate(const CQuaternion<T_real>& r)
 {
+	CQuaternion<T_real> t;
+	t.setZero();
+	CDualQuaternion<T_real> dQuat(r,t);
+	m_data = m_data * dQuat;
 }
 
 template<class T_real >
 void CTransform<T_real>::rotateX(const T_real& rx)
 {
-	T_real rxQuat[4] = {T_real(sin(rx * T_real(0.5))), T_real(0),T_real(0), T_real(cos(rx * T_real(0.5)))};
+	CQuaternion<T_real> rxQuat(T_real(sin(rx * T_real(0.5))), T_real(0),T_real(0), T_real(cos(rx * T_real(0.5))));
 	rotate(rxQuat);
 }
 
 template<class T_real >
 void CTransform<T_real>::rotateY(const T_real& ry)
 {
-	T_real ryQuat[4] = {0, sin(ry * T_real(0.5)), 0, cos(ry * T_real(0.5))};
+	CQuaternion<T_real> ryQuat(0, sin(ry * T_real(0.5)), 0, cos(ry * T_real(0.5)));
 	rotate(ryQuat);
 }
 
 template<class T_real >
 void CTransform<T_real>::rotateZ(const T_real& rz)
 {
-	T_real rzQuat[4] = {0,0,sin(rz * T_real(0.5)), cos(rz * T_real(0.5))};
+	CQuaternion<T_real> rzQuat(0,0,sin(rz * T_real(0.5)), cos(rz * T_real(0.5)));
 	rotate(rzQuat);
 }
 
 
 
 #endif
+

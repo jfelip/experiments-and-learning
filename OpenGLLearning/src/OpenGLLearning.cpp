@@ -25,6 +25,7 @@
 #include <Material.hpp>
 #include <CGLLight.hpp>
 #include <CVector3.hpp>
+#include <CReal.hpp>
 
 
 // Function prototypes
@@ -103,13 +104,13 @@ int main()
     //CSolidCylinder<GLfloat> s(0.2,0.5,t);
     //CSolidCapsule<GLfloat> s(0.2,0.5,t_object);
     //CSolidCone<GLfloat> s;
-    CSolidArrow<GLfloat> s;
-
-    CTransform<GLfloat> tx;
-    tx.rotateX( GLfloat(M_PI) * GLfloat(0.5) );
-    s.setTransform(tx);
+    //CSolidArrow<GLfloat> s;
+    CReferenceFrame<GLfloat> s;
 
     CSolidSphere<GLfloat> origin(0.1);
+	CTransform<GLfloat> t2;
+	t2.translateY(1);
+	origin.setTransform(t2);
 
     CMaterial<GLfloat> mat;
     mat.setSpecular(1,1,1);
@@ -167,9 +168,12 @@ int main()
     	//TODO: Loop through objects and materials to render
     		//Prepare material used by the rendered object
     		mat.use(&ourShader);
-    		//Draw geometry
     		s.draw(&ourShader);
+
+    		mat.use(&ourShader);
     		floor.draw(&ourShader);
+
+    		mat.use(&ourShader);
     		origin.draw(&ourShader);
 
 		normalShader.Use();
