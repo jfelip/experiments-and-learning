@@ -28,6 +28,7 @@ public:
 
 	void use(Shader *s)
 	{
+		s->Use();
     	GLint matDiffuseLoc  = glGetUniformLocation(s->Program, "material.diffuse");
     	GLint matSpecularLoc = glGetUniformLocation(s->Program, "material.specular");
     	GLint matShineLoc    = glGetUniformLocation(s->Program, "material.shininess");

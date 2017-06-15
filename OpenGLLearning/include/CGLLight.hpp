@@ -76,6 +76,8 @@ public:
 
 	void use(Shader *s)
 	{
+		s->Use();
+
 		//TODO: ADD LIGHT TYPE and pass it to the shader
         // Pass the light information to the shader
         GLint lightPosLoc = glGetUniformLocation(s->Program, "dirLight.direction");

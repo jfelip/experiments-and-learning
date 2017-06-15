@@ -1,5 +1,5 @@
-#ifndef GL_VIEWER_PRIMITIVES_H
-#define GL_VIEWER_PRIMITIVES_H
+#ifndef GL_GEOMETRY_PRIMITIVES_H
+#define GL_GEOMETRY_PRIMITIVES_H
 
 #include <vector>
 #include <memory>
@@ -183,6 +183,8 @@ bool COpenGLGeometry<T_real,T_vertex,T_indices>::updateBuffers()
 template<class T_real, class T_vertex, class T_indices>
 bool COpenGLGeometry<T_real,T_vertex,T_indices>::draw(Shader *shader)
 {
+	shader->Use();
+
 	//Update transformation matrix
 	m_transform.m_data.computeMatrix();
 

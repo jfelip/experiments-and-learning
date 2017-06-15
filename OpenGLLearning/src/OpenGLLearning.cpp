@@ -26,6 +26,7 @@
 #include <CGLLight.hpp>
 #include <CVector3.hpp>
 #include <CReal.hpp>
+#include <GLPointCloud.h>
 
 
 // Function prototypes
@@ -50,6 +51,7 @@ GLfloat lastFrame = 0.0f;
 const GLuint WIDTH = 800, HEIGHT = 600;
 
 bool wireframeMode = false;
+bool normalMode = false;
 
 // The MAIN function, from here we start the application and run the game loop
 int main()
@@ -100,17 +102,36 @@ int main()
 			shaderPath + "normalVisualization.frag"
 	);
 
+    Shader pointCloudShader
+	(
+			shaderPath + "pointCloudVisualization.vs",
+			shaderPath + "",
+			shaderPath + "pointCloudVisualization.frag"
+	);
+
+
+    CReferenceFrame<GLfloat> origin;
     CSolidBox<GLfloat> floor(10.0,10.0,0.1);
     //CSolidCylinder<GLfloat> s(0.2,0.5,t);
     //CSolidCapsule<GLfloat> s(0.2,0.5,t_object);
     //CSolidCone<GLfloat> s;
     //CSolidArrow<GLfloat> s;
-    CReferenceFrame<GLfloat> s;
+    //CCameraShape<GLfloat> s;
+    COpenGLPointCloud<GLfloat> s;
 
-    CSolidSphere<GLfloat> origin(0.1);
-	CTransform<GLfloat> t2;
-	t2.translateY(1);
-	origin.setTransform(t2);
+    std::vector<GLfloat> pc_data;
+    for (uint i=0;i<100;++i)
+    {
+    	for (uint j=0;j<100;++j)
+    	{
+    		pc_data.push_back(i/100.0);
+    		pc_data.push_back(j/100.0);
+    		pc_data.push_back(1.0);
+    	}
+    }
+    s.setPoints(pc_data);
+    s.setColors(pc_data);
+    s.updateBuffers();
 
     CMaterial<GLfloat> mat;
     mat.setSpecular(1,1,1);
@@ -143,8 +164,6 @@ int main()
         else
         	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-        // Activate the shader to render the scene
-        ourShader.Use();
 
         // Create camera transformation
         GLfloat view[16] = {1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1};
@@ -153,6 +172,7 @@ int main()
         projectionMatrix<GLfloat>(camera.Zoom, (float)WIDTH/(float)HEIGHT, 0.1f, 1000.0f,projection);
 
         // Pass view and projection matrices to the shader and viewer position
+        ourShader.Use();
         GLint viewLoc = glGetUniformLocation(ourShader.Program, "view");
         GLint projLoc = glGetUniformLocation(ourShader.Program, "projection");
         GLint viewPosLoc = glGetUniformLocation(ourShader.Program, "viewPos");
@@ -160,7 +180,12 @@ int main()
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
         glUniform3f(viewPosLoc, camera.Position.x(), camera.Position.y(), camera.Position.z());
 
-
+        // Pass view and projection matrices to the point cloud shader
+        pointCloudShader.Use();
+        viewLoc = glGetUniformLocation(pointCloudShader.Program, "view");
+        projLoc = glGetUniformLocation(pointCloudShader.Program, "projection");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, view);
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
 
     	//Prepare lights
     	dirLight.use(&ourShader);
@@ -168,29 +193,30 @@ int main()
     	//TODO: Loop through objects and materials to render
     		//Prepare material used by the rendered object
     		mat.use(&ourShader);
-    		s.draw(&ourShader);
+    		s.draw(&pointCloudShader);
 
     		mat.use(&ourShader);
     		floor.draw(&ourShader);
-
-    		mat.use(&ourShader);
     		origin.draw(&ourShader);
 
-		normalShader.Use();
-		// Pass view and projection matrices to the normal shader and viewer position
-		viewLoc = glGetUniformLocation(normalShader.Program, "view");
-		projLoc = glGetUniformLocation(normalShader.Program, "projection");
-		viewPosLoc = glGetUniformLocation(normalShader.Program, "viewPos");
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, view);
-		glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
-		glUniform3f(viewPosLoc, camera.Position.x(), camera.Position.y(), camera.Position.z());
 
 		//TODO: Loop through objects and materials to render the second pass the normals
     		//Prepare material used by the rendered object
+		if (normalMode)
+		{
+			// Pass view and projection matrices to the normal shader and viewer position
+	    	normalShader.Use();
+			viewLoc = glGetUniformLocation(normalShader.Program, "view");
+			projLoc = glGetUniformLocation(normalShader.Program, "projection");
+			viewPosLoc = glGetUniformLocation(normalShader.Program, "viewPos");
+			glUniformMatrix4fv(viewLoc, 1, GL_FALSE, view);
+			glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
+			glUniform3f(viewPosLoc, camera.Position.x(), camera.Position.y(), camera.Position.z());
 
 			s.draw(&normalShader);
     		floor.draw(&normalShader);
     		origin.draw(&normalShader);
+		}
 
         // Swap the screen buffers
         glfwSwapBuffers(window);
@@ -235,6 +261,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetWindowShouldClose(window, GL_TRUE);
     if (key == GLFW_KEY_W && action == GLFW_PRESS)
     	wireframeMode = !wireframeMode;
+    if (key == GLFW_KEY_N && action == GLFW_PRESS)
+    	normalMode = !normalMode;
     if (key >= 0 && key < 1024)
     {
         if(action == GLFW_PRESS)

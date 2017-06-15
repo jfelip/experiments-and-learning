@@ -156,7 +156,7 @@ public:
             _GENERIC_ERROR_("ERROR::SHADER::PROGRAM::LINKING_FAILED: " + std::string(infoLog));
         }
 
-        // Delete the shaders as they're linked into our program now and no longer necessery
+        // Delete the shaders as they're linked into our program now and no longer necessary
         if (vertexCode != "")
         {
         	glDeleteShader(vertex);
