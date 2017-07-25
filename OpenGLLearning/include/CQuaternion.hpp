@@ -48,13 +48,15 @@ public:
 
 	CQuaternion<T_real> operator/(const CQuaternion<T_real>& rhs) const;
 
+	CQuaternion<T_real> operator/(const T_real& rhs) const;
+
 	void conjugate();
 
 	CQuaternion<T_real> getConjugate();
 
 	void inverse();
 
-	void getInverse();
+	CQuaternion<T_real> getInverse();
 
 	void normalize();
 
@@ -155,13 +157,26 @@ CQuaternion<T_real> CQuaternion<T_real>::operator/(const CQuaternion<T_real>& rh
 
 }
 
+template<class T_real>
+CQuaternion<T_real> CQuaternion<T_real>::operator/(const T_real& rhs) const
+{
+	CQuaternion<T_real> res;
+
+	for (uint i=0; i<4; ++i)
+	{
+		res[i] =  m_data[i] / rhs;
+	}
+
+	return res;
+}
 
 template<class T_real>
 void CQuaternion<T_real>::conjugate()
 {
-	m_data[0] = -m_data[0];
-	m_data[1] = -m_data[1];
-	m_data[2] = -m_data[2];
+	for (uint i=0; i<3; ++i)
+	{
+		m_data[i] = -m_data[i];
+	}
 }
 
 
@@ -169,6 +184,7 @@ template<class T_real>
 CQuaternion<T_real> CQuaternion<T_real>::getConjugate()
 {
 	CQuaternion<T_real> res;
+
 	for (uint i=0; i<3; ++i)
 	{
 		res[i] = -m_data[i];
@@ -178,20 +194,26 @@ CQuaternion<T_real> CQuaternion<T_real>::getConjugate()
 	return res;
 }
 
-
-//TODO: Implements this
 template<class T_real>
 void CQuaternion<T_real>::inverse()
 {
+	T_real squaredNorm = sqNorm();
 
+	conjugate();
+	for (uint i=0; i<4; ++i)
+	{
+		m_data[i] /= squaredNorm;
+	}
 }
 
 
 //TODO: Implements this
 template<class T_real>
-void CQuaternion<T_real>::getInverse()
+CQuaternion<T_real> CQuaternion<T_real>::getInverse()
 {
-
+	CQuaternion<T_real> qInv;
+	qInv = getConjugate() / sqNorm();
+	return qInv;
 }
 
 

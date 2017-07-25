@@ -20,13 +20,12 @@
 #include <GLFW/glfw3.h>
 
 #include <CGLShader.hpp>
-#include <GLPrimitives.h>
+#include <primitives/GLPrimitives.h>
 #include <CGLCamera.hpp>
 #include <Material.hpp>
 #include <CGLLight.hpp>
 #include <CVector3.hpp>
 #include <CReal.hpp>
-#include <GLPointCloud.h>
 
 
 // Function prototypes
@@ -124,8 +123,8 @@ int main()
     {
     	for (uint j=0;j<100;++j)
     	{
-    		pc_data.push_back(i/100.0);
-    		pc_data.push_back(j/100.0);
+    		pc_data.push_back(i/100.0f);
+    		pc_data.push_back(j/100.0f);
     		pc_data.push_back(1.0);
     	}
     }
