@@ -16,7 +16,7 @@ class COpenGLGeometry
 {
 	typedef std::shared_ptr<COpenGLGeometry> Ptr;
 
-	typedef std::shared_ptr<COpenGLGeometry> ConstPtr;
+	typedef const std::shared_ptr<COpenGLGeometry> ConstPtr;
 
 public:
 	COpenGLGeometry(T_indices draw_type = GL_TRIANGLES);

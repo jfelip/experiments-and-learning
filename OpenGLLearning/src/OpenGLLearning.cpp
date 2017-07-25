@@ -9,6 +9,7 @@
 //TODO LIST!!
 //TODO: Add option for face normal visualization
 //TODO: Orbit-like navigation
+//TODO: Go through all the project and add the const to the ConstPtr definitons
 
 #include <iostream>
 
@@ -119,9 +120,9 @@ int main()
     COpenGLPointCloud<GLfloat> s;
 
     std::vector<GLfloat> pc_data;
-    for (uint i=0;i<100;++i)
+    for (uint i=0;i<1000;++i)
     {
-    	for (uint j=0;j<100;++j)
+    	for (uint j=0;j<1000;++j)
     	{
     		pc_data.push_back(i/100.0f);
     		pc_data.push_back(j/100.0f);

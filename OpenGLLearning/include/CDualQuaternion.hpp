@@ -86,19 +86,21 @@ public:
 		return CDualQuaternion(m_real.getConjugate(), m_dual.getConjugate());
 	}
 
-	//TODO: Implement this
-	void inverse();
+    //TODO:Verify this implementation
+	void inverse(){ m_real.inverse(); m_dual.conjugate(); }
 
-	//TODO: Implement this
-	void getInverse();
+    //TODO:Verify this implementation
+	CDualQuaternion<T_real> getInverse(){ return CDualQuaternion(m_real.getInverse(), m_dual.getConjugate()); }
 
 	void normalize(){m_real.normalize();}
 
 	std::string toString() {return "Real: " + m_real.toString() + " Dual: "+m_dual.toString();}
 
-	//TODO: Implement this
 	template<typename T>
-	friend std::ostream& operator<<(std::ostream& os, const CDualQuaternion<T>& rhs);
+	friend std::ostream& operator<<(std::ostream& os, const CDualQuaternion<T>& rhs)
+	{
+		return os << rhs.getReal() << " " << rhs.getDual();
+	}
 
 	void computeMatrix();
 
