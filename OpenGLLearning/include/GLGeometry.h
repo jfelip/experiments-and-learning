@@ -14,6 +14,7 @@
 template<typename T_real=double, typename T_vertex=GLfloat, typename T_indices=GLuint>
 class COpenGLGeometry
 {
+public:
 	typedef std::shared_ptr<COpenGLGeometry> Ptr;
 
 	typedef const std::shared_ptr<COpenGLGeometry> ConstPtr;
