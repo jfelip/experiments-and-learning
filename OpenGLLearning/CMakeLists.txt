@@ -24,12 +24,10 @@ set(SOURCE_FILES
         include/primitives/CSolidBox.h
         include/primitives/CSolidArrow.h
         include/primitives/CReferenceFrame.h
-        include/physics/CParticle.hpp
-        include/physics/CParticleSystem.h
-        include/physics/CPositionBasedDynamics.h
+        include/primitives/CParticleSystem.h
         src/OpenGLLearning.cpp)
 
-include_directories(include)
+include_directories(include ../PBD/include)
 
 link_libraries(glfw GLEW GL)
 

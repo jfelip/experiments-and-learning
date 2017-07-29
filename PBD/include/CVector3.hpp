@@ -2,6 +2,7 @@
 #define _CVECTOR3_H_
 
 #include <ostream>
+#include <cmath>
 
 namespace vec3
 {
@@ -102,6 +103,33 @@ public:
 		return *this;
 	}
 
+    Vector3 operator-( const Vector3& right )
+    {
+        return Vector3(
+                m_data[0] - right(0),
+                m_data[1] - right(1),
+                m_data[2] - right(2)
+        );
+    }
+
+    Vector3 operator+( const Vector3& right )
+    {
+        return Vector3(
+                m_data[0] + right(0),
+                m_data[1] + right(1),
+                m_data[2] + right(2)
+        );
+    }
+
+    Vector3 operator*( const T_Real& right )
+    {
+        return Vector3(
+                m_data[0] * right,
+                m_data[1] * right,
+                m_data[2] * right
+        );
+    }
+
 	Vector3& operator-=( const Vector3& right )
 	{
 		m_data[0] = m_data[0] - right(0);
@@ -121,7 +149,7 @@ public:
 
 	T_Real norm()
 	{
-		return sqrt(squared_norm());
+		return std::sqrt(squared_norm());
 	}
 
 	T_Real squared_norm()
@@ -131,7 +159,10 @@ public:
 
 	void normalize()
 	{
-		*this = *this / norm();
+		T_Real n = norm();
+		m_data[0] /= n;
+		m_data[1] /= n;
+		m_data[2] /= n;
 	}
 
 protected:

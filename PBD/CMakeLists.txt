@@ -11,6 +11,8 @@ set(SOURCE_FILES
         include/physics/CParticle.hpp
         include/physics/CParticleSystem.h
         include/physics/CPositionBasedDynamics.h
+        include/physics/CConstraint.hpp
+        include/physics/CWorld.h
         src/main.cpp)
 
 add_executable(PBD ${SOURCE_FILES})

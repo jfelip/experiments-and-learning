@@ -1,6 +1,10 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
+#include <iostream>
+#include <sstream>
+#include <string>
+
 #define _GENERIC_ERROR_(msg) CCommon::OnGenericError(__PRETTY_FUNCTION__,__FILE__,__LINE__,msg);
 #define _GENERIC_EXCEPTION_(Exception) CCommon::OnGenericException(Exception,__PRETTY_FUNCTION__,__FILE__,__LINE__);
 #define _GENERIC_WARNING_(msg) CCommon::OnGenericWarning(__PRETTY_FUNCTION__,__FILE__,__LINE__,msg);

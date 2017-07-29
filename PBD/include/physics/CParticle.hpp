@@ -11,12 +11,53 @@ template<typename T_real=double>
 class CParticle
 {
 public:
-    typedef std::shared_ptr<CParticle> Ptr;
+    typedef std::shared_ptr< CParticle<T_real> > Ptr;
 
-    typedef const std::shared_ptr<CParticle> ConstPtr;
+    typedef const std::shared_ptr< CParticle<T_real> > ConstPtr;
 
 public:
     CParticle() = default;
+
+    CParticle(const T_real& x, const T_real& y, const T_real& z, const T_real& mass, const T_real& size, const size_t& group=0):
+            m_position( vec3::Vector3<T_real>(x,y,z) ),
+            m_mass(mass),
+            m_massInv(1/mass),
+            m_size(size),
+            m_group(group),
+            m_collision(false)
+    {
+
+    }
+
+    CParticle(const T_real& x,    const T_real& y,  const T_real& z,
+              const T_real& vx,   const T_real& vy, const T_real& vz,
+              const T_real& mass, const T_real& size,
+              const size_t& group=0):
+            m_position( vec3::Vector3<T_real>(x,y,z) ),
+            m_velocity( vec3::Vector3<T_real>(vx,vy,vz) ),
+            m_mass(mass),
+            m_massInv(1/mass),
+            m_size(size),
+            m_group(group),
+            m_collision(false)
+    {
+
+    }
+
+    CParticle(const vec3::Vector3<T_real>& pos,
+              const vec3::Vector3<T_real>& vel,
+              const T_real& mass, const T_real& size,
+              const size_t& group=0):
+            m_position( pos ),
+            m_velocity( vel ),
+            m_mass(mass),
+            m_massInv(1/mass),
+            m_size(size),
+            m_group(group),
+            m_collision(false)
+    {
+
+    }
 
     ~CParticle() = default;
 
@@ -27,8 +68,10 @@ public:
             m_extForce(p.m_extForce),
             m_mass(p.m_mass),
             m_massInv(p.m_massInv),
-            m_size(p.m_size) {
-    }
+            m_size(p.m_size),
+            m_group(p.m_group),
+            m_collision(p.m_collision)
+    { }
 
     CParticle(CParticle &&p) noexcept :
             m_position(std::move(p.m_position)),
@@ -37,70 +80,90 @@ public:
             m_extForce(std::move(p.m_extForce)),
             m_mass(std::move(p.m_mass)),
             m_massInv(std::move(p.m_massInv)),
-            m_size(std::move(p.m_size)) {
-    }
+            m_size(std::move(p.m_size)),
+            m_group(std::move(p.m_group)),
+            m_collision(std::move(p.m_collision))
+    { }
 
-    CParticle &operator=(const CParticle &p) {
-        m_position = p.getPosition();
-        m_predPosition = p.getPredPosition();
-        m_velocity = p.getVelocity();
-        m_extForce = p.getExtForce();
+    CParticle &operator=(const CParticle &p)
+    {
+        m_position = p.m_position;
+        m_predPosition = p.m_predPosition;
+        m_velocity = p.m_velocity;
+        m_extForce = p.m_extForce;
         m_mass = p.getMass();
         m_massInv = p.getMassInv();
-        m_size = p.getSize();
+        m_size = p.m_size;
+        m_group = p.m_group;
+        m_collision = p.m_collision;
         return *this;
     }
 
-    CParticle &operator=(CParticle &&p) noexcept {
-        m_position = std::move(p.getPosition());
-        m_predPosition = std::move(p.getPredPosition());
-        m_velocity = std::move(p.getVelocity());
-        m_extForce = std::move(p.getExtForce());
+    CParticle &operator=(CParticle &&p) noexcept
+    {
+        m_position = std::move(p.m_position);
+        m_predPosition = std::move(p.m_predPosition);
+        m_velocity = std::move(p.m_velocity);
+        m_extForce = std::move(p.m_extForce);
         m_mass = std::move(p.getMass());
         m_massInv = std::move(p.getMassInv());
-        m_size = std::move(p.getSize());
+        m_size = std::move(p.m_size);
+        m_group = std::move(p.m_group);
+        m_collision = std::move(p.m_collision);
         return *this;
     }
-
-    vec3::Vector3 &getPosition() const { return m_position; }
-
-    vec3::Vector3 &getPredPosition() const { return m_predPosition; }
-
-    vec3::Vector3 &getVelocity() const { return m_velocity; }
-
-    vec3::Vector3 &getExtForce() const { return m_extForce; }
-
-    T_real getMass() const { return m_mass; }
-
-    T_real getMassInv() const { return m_massInv; }
-
-    T_real getSize() const { return m_size; }
 
     void setMass(const T_real &m) {
         m_mass = m;
         m_massInv = 1 / m_mass;
     }
 
-    void setSize(const T_real &s) { m_size = s; }
+    T_real getMass( ) const { return m_mass; }
 
-    //TODO: Implement this
-    void symplecticEulerUpdate(T_real timeStep);
+    T_real getMassInv( ) const { return m_massInv; }
 
-    //TODO: Implement this
-    void updatePositionsWithPredPositions();
+    void clearExtForces() { m_extForce = vec3::Vector3<T_real>(0,0,0); }
 
-    //TODO: Implement this
-    void updateVelocities();
+    void symplecticEulerUpdate(T_real timeStep)
+    {
+        if (m_mass <= 0)
+        {
+            m_predPosition = m_position;
+        }
+        else
+        {
+            m_velocity    += m_extForce * timeStep * m_massInv;
+            m_predPosition = m_position + m_velocity * timeStep;
+        }
+    }
 
+    void updatePositionsWithPredPositions(T_real timeStep)
+    {
+        if (m_mass <= 0)
+        {
+            m_position = m_position;
+        }
+        else
+        {
+            m_velocity = (m_predPosition - m_position) / timeStep;
+            m_position = m_predPosition;
+        }
+    }
+
+    vec3::Vector3<T_real> m_position;
+    vec3::Vector3<T_real> m_predPosition;
+    vec3::Vector3<T_real> m_velocity;
+    vec3::Vector3<T_real> m_extForce;
+    T_real m_size;
+    size_t m_group;
+    bool m_collision;
 
 protected:
-    vec3::Vector3 m_position;
-    vec3::Vector3 m_predPosition;
-    vec3::Vector3 m_velocity;
-    vec3::Vector3 m_extForce;
     T_real m_mass;
     T_real m_massInv;
-    T_real m_size;
+
 };
 
 }
+
+#endif

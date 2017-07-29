@@ -10,6 +10,7 @@
 #include <GLFW/glfw3.h>
 
 #include <Transform.h>
+#include <physics/CParticle.hpp>
 
 template<typename T_real=double, typename T_vertex=GLfloat>
 class COpenGLPointCloud
@@ -39,11 +40,54 @@ public:
 
     CTransform<T_real>& getTransform() {return m_transform;}
 
-    void setPoints( const std::vector<T_vertex>& vertices ) {m_vertices = vertices;}
+	void setPoints( const std::vector<T_vertex>& vertices ) {m_vertices = vertices;}
+
+	void setPoints( const std::vector<PBD::CParticle<> >& vertices )
+	{
+		m_vertices.clear();
+		for (const auto & p:vertices)
+		{
+			m_vertices.push_back( p.m_position(0) );
+			m_vertices.push_back( p.m_position(1) );
+			m_vertices.push_back( p.m_position(2) );
+		}
+	}
 
     void setNormals( const std::vector<T_vertex>& normals ) {m_normals = normals;}
 
     void setColors( const std::vector<T_vertex>& colors ) {m_colors = colors;}
+
+    void setColor( const T_real& r,const T_real& g, const T_real& b )
+    {
+        m_colors.clear();
+        for (const auto & p:m_vertices)
+        {
+            m_colors.push_back( r );
+            m_colors.push_back( g );
+            m_colors.push_back( b );
+        }
+    }
+
+    void setColors( const std::vector<PBD::CParticle<> >& vertices )
+    {
+        m_colors.clear();
+        for (const auto & p:vertices)
+        {
+            if (p.m_collision)
+            {
+                m_colors.push_back( .5 );
+                m_colors.push_back( 0 );
+                m_colors.push_back( 0 );
+            }
+            else
+            {
+                m_colors.push_back( 0 );
+                m_colors.push_back( .5 );
+                m_colors.push_back( 0 );
+            }
+        }
+    }
+
 
     void setTransform( const CTransform<T_real>& transform ) { m_transform = transform;}
 
@@ -157,18 +201,20 @@ bool COpenGLPointCloud<T_real,T_vertex>::updateBuffers()
 template<class T_real, class T_vertex>
 bool COpenGLPointCloud<T_real,T_vertex>::draw(Shader *shader)
 {
-	shader->Use();
-	//Update transformation matrix
-	m_transform.m_data.computeMatrix();
+    shader->Use();
+    //Update transformation matrix
+    m_transform.m_data.computeMatrix();
 
-	GLuint transformLoc = glGetUniformLocation(shader->Program, "model");
-	glUniformMatrix4fv(transformLoc, 1,GL_FALSE, m_transform.m_data.m_pMatrix);
+    GLuint pointSize = glGetUniformLocation(shader->Program, "pointSize");
+    GLuint transformLoc = glGetUniformLocation(shader->Program, "model");
+    glUniformMatrix4fv(transformLoc, 1,GL_FALSE, m_transform.m_data.m_pMatrix);
+    glUniform1ui(pointSize,m_pointSize);
 
     glBindVertexArray(VAO);
     glDrawArrays(GL_POINTS, 0, m_vertices.size()/3);
     glBindVertexArray(0);
 
-	return true;
+    return true;
 }
 
 

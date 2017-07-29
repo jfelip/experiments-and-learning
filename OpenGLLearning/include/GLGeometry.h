@@ -10,6 +10,7 @@
 #include <GLFW/glfw3.h>
 
 #include <Transform.h>
+#include <CGLShader.hpp>
 
 template<typename T_real=double, typename T_vertex=GLfloat, typename T_indices=GLuint>
 class COpenGLGeometry

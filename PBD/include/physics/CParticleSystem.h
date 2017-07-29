@@ -3,59 +3,84 @@
 #define POSITIONBASEDDYNAMICS_CPARTICLESYSTEM_H
 
 #include <physics/CParticle.hpp>
+#include <physics/CConstraint.hpp>
 #include <memory>
 #include <vector>
 #include <CVector3.hpp>
 
 namespace PBD {
 
-
     template<typename T_real=double>
     class CParticleSystem {
     public:
-        typedef std::shared_ptr<CParticleSystem> Ptr;
+        typedef std::shared_ptr< CParticleSystem<T_real> > Ptr;
 
-        typedef const std::shared_ptr<CParticleSystem> ConstPtr;
+        typedef const std::shared_ptr< CParticleSystem<T_real> > ConstPtr;
 
     public:
-        CParticleSystem() {}
+        CParticleSystem() = default;
 
-        ~CParticleSystem() {}
+        ~CParticleSystem() = default;
 
-        std::vector<CParticle> &getParticles() { return m_particles; }
+        CParticleSystem( const CParticleSystem& p ): m_particles( p.m_particles )
+        { }
 
-        void setParticles(std::vector<CParticle> &p) { m_particles = p; }
+        CParticleSystem( CParticleSystem&& p ) noexcept : m_particles( std::move(p.m_particles) )
+        { }
 
-        T_real getMass() { return m_mass; }
-
-        T_real getMassInv() { return m_massInv; }
-
-        void setMass(T_real m) {
-            m_mass = m;
-            m_massInv = 1 / m_mass;
+        CParticleSystem &operator=(const CParticleSystem &p)
+        {
+            m_particles = p.m_particles;
+            return *this;
         }
 
-        T_real getSize() { return m_size; }
+        CParticleSystem &operator=(CParticleSystem &&p) noexcept
+        {
+            m_particles = std::move(p.m_particles);
+            return *this;
+        }
 
-        void setSize(T_real s) { m_size = s; }
+        void getBoundingBox(vec3::Vector3<T_real>& min, vec3::Vector3<T_real>& max)
+        {
+            for (auto it=m_particles.begin(); it<m_particles.end(); ++it)
+            {
+                for (uint i=0; i<3; ++i)
+                {
+                    min[i] = std::min(min[i] , (*it)->m_position(i));
+                    max[i] = std::max(max[i] , (*it)->m_position(i));
+                }
+            }
+        }
 
-        //TODO: Implement this
-        void symplecticEulerUpdate(T_real timeStep);
+        vec3::Vector3<T_real> getCentroid()
+        {
+            vec3::Vector3<T_real> centroid(0,0,0);
+            for (auto it=m_particles.begin(); it<m_particles.end(); ++it)
+            {
+                for (uint i = 0; i < 3; ++i)
+                {
+                    centroid[i] += (*it)->m_position[i];
+                }
+            }
+            centroid /= m_particles.size();
+            return centroid;
+        }
 
-        //TODO: Implement this
-        void updatePositionsWithPredPositions();
+        vec3::Vector3<T_real> getVelocity()
+        {
+            vec3::Vector3<T_real> vel(0,0,0);
+            for (auto it=m_particles.begin(); it<m_particles.end(); ++it)
+            {
+                for (uint i = 0; i < 3; ++i)
+                {
+                    vel[i] += (*it)->m_velocity[i];
+                }
+            }
+            vel /= m_particles.size();
+            return vel;
+        }
 
-        //TODO: Implement this
-        void updateVelocities();
-
-
-    protected:
-        std::vector<CParticle> m_particles;        ///< Current state of the particle system.
-        std::vector<CParticle> m_initialParticles; ///< This particle configuration is the resting position for the particle system.
-        T_real m_size;
-        T_real m_mass;
-        T_real m_massInv;
-        vec3::Vector3 m_extForce;
+        std::vector< PBD::CParticle<>* > m_particles;        ///< Current state of the particle system.
     };
 
 }

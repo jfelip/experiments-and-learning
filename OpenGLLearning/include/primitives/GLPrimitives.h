@@ -10,6 +10,7 @@
 #include <primitives/CReferenceFrame.h>
 #include <primitives/CSolidCapsule.h>
 #include <primitives/GLPointCloud.h>
+#include <primitives/CParticleSystem.h>
 
 
 //TODO: 2DText
