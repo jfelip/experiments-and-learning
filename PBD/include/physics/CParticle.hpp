@@ -7,7 +7,11 @@
 
 namespace PBD {
 
-template<typename T_real=double>
+    const static double minVel = 0.001;
+    const static double velDamping = 0.99;
+
+
+    template<typename T_real=double>
 class CParticle
 {
 public:
@@ -20,6 +24,8 @@ public:
 
     CParticle(const T_real& x, const T_real& y, const T_real& z, const T_real& mass, const T_real& size, const size_t& group=0):
             m_position( vec3::Vector3<T_real>(x,y,z) ),
+            m_velocity( vec3::Vector3<T_real>(0,0,0) ),
+            m_extForce( vec3::Vector3<T_real>(0,0,0) ),
             m_mass(mass),
             m_massInv(1/mass),
             m_size(size),
@@ -35,6 +41,7 @@ public:
               const size_t& group=0):
             m_position( vec3::Vector3<T_real>(x,y,z) ),
             m_velocity( vec3::Vector3<T_real>(vx,vy,vz) ),
+            m_extForce( vec3::Vector3<T_real>(0,0,0) ),
             m_mass(mass),
             m_massInv(1/mass),
             m_size(size),
@@ -132,8 +139,11 @@ public:
         }
         else
         {
-            m_velocity    += m_extForce * timeStep * m_massInv;
-            m_predPosition = m_position + m_velocity * timeStep;
+            m_velocity     = m_velocity + m_extForce * timeStep * m_massInv * PBD::velDamping;
+            if (m_velocity.norm() > PBD::minVel)
+                m_predPosition = m_position + m_velocity * timeStep;
+            else
+                m_predPosition = m_position;
         }
     }
 

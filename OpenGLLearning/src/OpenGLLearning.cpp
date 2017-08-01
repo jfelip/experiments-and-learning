@@ -62,6 +62,7 @@ bool wireframeMode = false;
 bool normalMode = false;
 bool constraintMode = false;
 bool simStepKey = false;
+bool simEnabled = false;
 
 // The MAIN function, from here we start the application and run the game loop
 int main()
@@ -185,10 +186,10 @@ int main()
 		Do_Movement();
 
         // PHYSICS ENGINE UPDATE
-        if (simStepKey)
+        if (simStepKey || simEnabled)
         {
             PBDWorld.step(simStep,0.1);
-            //simStepKey = false;
+            simStepKey = false;
         }
 
         // Clear the colorbuffer and the depth buffer
@@ -313,6 +314,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         constraintMode= !constraintMode;
     if (key == GLFW_KEY_ENTER && action == GLFW_PRESS)
         simStepKey = !simStepKey;
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+        simEnabled = !simEnabled;
     if (key >= 0 && key < 1024)
     {
         if(action == GLFW_PRESS)
@@ -354,20 +357,34 @@ void PBDCreateObjects( PBD::CWorld* pWorld )
 
     std::cout<<"Creating objects"<<std::endl;
 
+    //Create cube objects                         position              dimensions             partSize partWeight groupId
+    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4) , Vector3(0.3,0.3,0.3), pWorld, 0.1, 0.02, 2);
+    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,3) , Vector3(0.3,0.3,0.3), pWorld, 0.1, 0.01, 1);
+
     //Create a cube 5x5x0.05 m size with 5cm particles centered at 0,0,0 (This will be the floor)
     PBD::createParticleSystemSolidCube<T_real>(Vector3(-1.5,-1.5,0) , Vector3(3,3,0.1), pWorld, 0.1, 0, 0);
 
-    //Create cube objects                         position              dimensions             partSize partWeight groupId
-    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,3) , Vector3(0.2,0.2,0.2), pWorld, 0.1, 0.01, 1);
-    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4) , Vector3(0.2,0.2,0.2), pWorld, 0.1, 0.02, 2);
+    //Hang one object with a distance constraint from a point
+    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4.5) , Vector3(0.1,0.1,0.1), pWorld, 0.1, 0, 3);   //Object to hang from
+    PBD::CConstantDistanceConstraint<>::Ptr hangConstraint (
+            new PBD::CConstantDistanceConstraint<>(
+                    pWorld->m_particles[0].get(),
+                    pWorld->m_particles[pWorld->m_particles.size()-1].get()
+            )
+    );
+    hangConstraint->setDistanceTolerance(0.5);
+    hangConstraint->setTargetDistance(1.0);
+    pWorld->m_permanentConstraints.push_back(hangConstraint);
 
-//    //Hang one object with a distance constraint
-//    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4.5) , Vector3(0.1,0.1,0.1), pWorld, 0.1, 0, 3);   //Object to hang from
-//    PBD::CConstantDistanceConstraint<>::Ptr hangConstraint (
-//            new PBD::CConstantDistanceConstraint<>(
-//                    &(psObject2->m_particles[0]),
-//                    &(psFixedObject->m_particles[0]))
-//    );
-//    psFixedObject->m_internalConstraints.emplace_back(hangConstraint);
+    PBD::CConstantDistanceConstraint<>::Ptr hangConstraint2 (
+            new PBD::CConstantDistanceConstraint<>(
+                    pWorld->m_particles[3].get(),
+                    pWorld->m_particles[pWorld->m_particles.size()-1].get()
+            )
+    );
+    hangConstraint2->setDistanceTolerance(0.5);
+    hangConstraint2->setTargetDistance(1.0);
+    pWorld->m_permanentConstraints.push_back(hangConstraint2);
+
 
 }

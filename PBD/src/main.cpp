@@ -35,20 +35,21 @@ void PBDCreateObjects( PBD::CWorld* pWorld )
 
     std::cout<<"Creating objects"<<std::endl;
 
+    //Create cube objects                         position              dimensions             partSize partWeight groupId
+    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4) , Vector3(0.2,0.2,0.2), pWorld, 0.1, 0.02, 2);
+    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,3) , Vector3(0.2,0.2,0.2), pWorld, 0.1, 0.01, 1);
+
     //Create a cube 5x5x0.05 m size with 5cm particles centered at 0,0,0 (This will be the floor)
     PBD::createParticleSystemSolidCube<T_real>(Vector3(-1.5,-1.5,0) , Vector3(3,3,0.1), pWorld, 0.1, 0, 0);
 
-    //Create cube objects                         position              dimensions             partSize partWeight groupId
-    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,3) , Vector3(0.2,0.2,0.2), pWorld, 0.1, 0.01, 1);
-    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4) , Vector3(0.2,0.2,0.2), pWorld, 0.1, 0.02, 2);
-
-//    //Hang one object with a distance constraint
-//    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4.5) , Vector3(0.1,0.1,0.1), pWorld, 0.1, 0, 3);   //Object to hang from
-//    PBD::CConstantDistanceConstraint<>::Ptr hangConstraint (
-//            new PBD::CConstantDistanceConstraint<>(
-//                    &(psObject2->m_particles[0]),
-//                    &(psFixedObject->m_particles[0]))
-//    );
-//    psFixedObject->m_internalConstraints.emplace_back(hangConstraint);
+    //Hang one object with a distance constraint from a point
+    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4.5) , Vector3(0.1,0.1,0.1), pWorld, 0.1, 0, 3);   //Object to hang from
+    PBD::CConstantDistanceConstraint<>::Ptr hangConstraint (
+            new PBD::CConstantDistanceConstraint<>(
+                    pWorld->m_particles[0].get(),
+                    pWorld->m_particles[pWorld->m_particles.size()-1].get()
+            )
+    );
+    pWorld->m_permanentConstraints.push_back(hangConstraint);
 
 }

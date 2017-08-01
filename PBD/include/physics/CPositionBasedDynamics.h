@@ -193,14 +193,14 @@ void createParticleSystemSolidCube(
         }
     }
 
-    size_t partIdxEnd = pWorld->m_particles.size()-1;
+    size_t partIdxEnd = pWorld->m_particles.size();
 
     //Add distance constraints pairwise
     if (partWeigth != 0)
     {
-        for (uint i=partIdxIni; i<partIdxEnd ; ++i)
+        for (size_t i=partIdxIni; i<partIdxEnd ; ++i)
         {
-            for (uint j=i+1; j<partIdxEnd; ++j)
+            for (size_t j=i+1; j<partIdxEnd; ++j)
             {
                 CParticle<>* p1 = pWorld->m_particles[i].get();
                 CParticle<>* p2 = pWorld->m_particles[j].get();
