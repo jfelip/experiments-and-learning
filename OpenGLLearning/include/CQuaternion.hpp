@@ -14,7 +14,10 @@ public:
 
 	typedef std::shared_ptr<CQuaternion> ConstPtr;
 
-	CQuaternion(){}
+	CQuaternion() = default;
+
+	CQuaternion( T_real* v ) { for (uint i=0; i<4; ++i) m_data[i] = v[i]; }
+
 
 	CQuaternion(const CQuaternion<T_real>& rhs) { *this = rhs;}
 
@@ -26,7 +29,7 @@ public:
 		m_data[3] = w;
 	}
 
-	~CQuaternion(){};
+	~CQuaternion() = default;
 
 	void setIdentity();
 

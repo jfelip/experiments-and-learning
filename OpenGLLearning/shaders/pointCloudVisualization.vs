@@ -2,22 +2,37 @@
 // Vertex shader:
 // ================
 #version 330 core
-layout (location = 0) in vec3 position;
-layout (location = 1) in vec3 normal;
-layout (location = 2) in vec3 color;
+layout (location = 0) in vec3 SpherePosition;
+layout (location = 1) in vec3 SphereColor;
 
-out VS_OUT {
-    vec3 color;
+out VS_OUT
+{
+    vec4 eye_position;
+    vec3 sphere_color;
+    float sphere_radius;
+    vec3 lightDir;
 } vs_out;
 
+
+uniform float SphereRadius;
+uniform vec3 lightPos;
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
-uniform uint pointSize;
+uniform int screenWidth;
 
 void main()
 {
-    gl_PointSize = pointSize;
-    gl_Position = projection * view * model * vec4(position, 1.0f);
-    vs_out.color = color; 
+      vs_out.eye_position = view * model * vec4(SpherePosition.xyz,1.0f);
+      vs_out.sphere_color = SphereColor.xyz;
+      vs_out.sphere_radius = SphereRadius;
+
+      vs_out.lightDir = normalize( lightPos.xyz );
+      float dist = length(vs_out.eye_position.xyz);
+
+      gl_Position = vs_out.eye_position;
+      gl_Position = projection * gl_Position;
+    // http://stackoverflow.com/questions/8608844/resizing-point-sprites-based-on-distance-from-the-camera
+      vec4 projCorner = projection * vec4(vs_out.sphere_radius, vs_out.sphere_radius, vs_out.eye_position.z, vs_out.eye_position.w);
+      gl_PointSize = screenWidth * projCorner.x / projCorner.w;
 }

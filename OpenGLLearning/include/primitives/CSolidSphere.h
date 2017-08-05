@@ -42,7 +42,9 @@ public:
     T_real getRadius(){return m_radius;}
     T_integer getAlphaResolution(){return m_alpha_resolution;}
     T_integer getBetaResolution(){return m_beta_resolution;}
-    CTransform<T_real>& getTransform() {return m_geom.getTransform();}
+    CTransform<T_real> & getTransform() {return m_geom.getTransform();}
+    std::vector<T_real>& getVertices()  {return m_geom.getVertices();}
+    std::vector<T_real>& getNormals()   {return m_geom.getNormals();}
 
     void generateVertexData()
     {

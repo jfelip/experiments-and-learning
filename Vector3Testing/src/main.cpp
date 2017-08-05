@@ -1,45 +1,78 @@
 #include <CVector3.hpp>
 #include <ctime>
 #include <iostream>
-#include <Eigen/Dense>
+//#include <Eigen/Dense>
 
-void testArrayImplementation(unsigned int iterations)
+using namespace vec3;
+
+//void testArrayImplementation(unsigned int iterations)
+//{
+//	Vector3::Vector3 v1;
+//	Vector3::assign(v1,5);
+//
+//	uint i=0;
+//	while (i<iterations)
+//	{
+//		Vector3::inverse(v1);
+//		++i;
+//	}
+//
+//}
+//
+//void testClassImplementation(unsigned int iterations)
+//{
+//	Vector3<double> v1;
+//	v1 = 5;
+//
+//	uint i=0;
+//	while (i<iterations)
+//	{
+//		v1.inverse();
+//		++i;
+//	}
+//
+//}
+//
+//void testEigenImplementation(unsigned int iterations)
+//{
+//	Eigen::Vector3d v;
+//	v << 5 ,5, 5;
+//
+//	uint i=0;
+//	while (i<iterations)
+//	{
+//		v = -v;
+//		++i;
+//	}
+//}
+
+void testQuaternionForInitialization(unsigned int iterations)
 {
-	Vector3::Vector3 v1;
-	Vector3::assign(v1,5);
+	double q[4] = {0,1,2,3};
+	double q2[4] = {0,0,0,0};
+
 
 	uint i=0;
 	while (i<iterations)
 	{
-		Vector3::inverse(v1);
+		for (uint j=0; j<4; ++j)
+			q2[j] = q[j];
 		++i;
 	}
-
 }
 
-void testClassImplementation(unsigned int iterations)
+void testQuaternionSequentialInitialization(unsigned int iterations)
 {
-	Vector3::CVector3<double> v1;
-	v1 = 5;
+	double q[4] = {0,1,2,3};
+	double q2[4] = {0,0,0,0};
 
 	uint i=0;
 	while (i<iterations)
 	{
-		v1.inverse();
-		++i;
-	}
-
-}
-
-void testEigenImplementation(unsigned int iterations)
-{
-	Eigen::Vector3d v;
-	v << 5 ,5, 5;
-
-	uint i=0;
-	while (i<iterations)
-	{
-		v = -v;
+		q2[0] = q[0];
+		q2[1] = q[1];
+		q2[2] = q[2];
+		q2[3] = q[3];
 		++i;
 	}
 }
@@ -52,26 +85,29 @@ int main(int argc, char** argv)
 
 	using namespace std;
 
-	clock_t begin = clock();
-	testArrayImplementation(iterations);
-	clock_t end = clock();
+    clock_t begin, end;
+    double elapsed_secs;
 
-	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-	cout<<"Time using array implementation: "<< elapsed_secs << std::endl;
+//	begin = clock();
+//	testArrayImplementation(iterations);
+//	end = clock();
+//
+//	elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+//	cout<<"Time using array implementation: "<< elapsed_secs << std::endl;
 
 	begin = clock();
-	testClassImplementation(iterations);
+    testQuaternionSequentialInitialization(iterations);
 	end = clock();
 
 	elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-	cout<<"Time using class implementation: "<< elapsed_secs << std::endl;
+	cout<<"Time using Sequential implementation: "<< elapsed_secs << std::endl;
 
 	begin = clock();
-	testEigenImplementation(iterations);
+	testQuaternionForInitialization(iterations);
 	end = clock();
 
 	elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-	cout<<"Time using eigen implementation: "<< elapsed_secs;
+	cout<<"Time using For-loop implementation: "<< elapsed_secs;
 
 }
 

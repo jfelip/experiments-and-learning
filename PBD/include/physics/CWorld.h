@@ -11,6 +11,14 @@
 #include <physics/CParticleSystem.h>
 #include <physics/CConstraint.hpp>
 
+
+//TODO: HIGH Approximate shock propagation to increase convergence of rigid stacks
+//TODO: HIGH Static and dynamic friction forces
+//TODO: HIGH Constraint elasticity
+//TODO: HIGH Constraint plasticity
+//TODO: HIGH Constraint breaking
+
+
 namespace PBD
 {
 
@@ -27,7 +35,6 @@ public:
     void applyGravity();
     void symplecticEulerUpdate(double timeStep);
     void createCollisionConstraints();
-    void copyPermanentConstraints();
     void clearExternalForces();
     bool gaussSeidelSolver();
     void updatePositionsWithPredPositions(double timeStep);
@@ -37,9 +44,9 @@ public:
     std::vector<PBD::CParticleSystem<>::Ptr>  m_particleSystems;
     std::vector<PBD::CConstraint<>::Ptr>      m_constraints;
     std::vector<PBD::CConstraint<>::Ptr>      m_permanentConstraints;
-    vec3::Vector3<> m_gravity;
+    std::vector<PBD::CShapeMatchingConstraint<>::Ptr>      m_shapeMatchingConstraints;
+    Eigen::Vector3d m_gravity;
 };
-
 
 bool CWorld::collision(CParticle<>* p1, CParticle<>* p2)
 {
@@ -104,12 +111,11 @@ void CWorld::step(const double & timeStep, const double & timeout)
     createCollisionConstraints();
     std::cout << "Generated " << m_constraints.size() << " collision constraints" << std::endl;
 
-    copyPermanentConstraints();
-    std::cout << "Total " << m_constraints.size() << " constraints" << std::endl;
-
     bool constraintsOK = false;
+    uint maxIter = 5000;
     uint i=0;
-    while(elapsed_seconds < timeout && !constraintsOK)
+
+    while(elapsed_seconds < timeout && !constraintsOK && i<maxIter)
     {
         constraintsOK = gaussSeidelSolver();
         elapsed = std::chrono::high_resolution_clock::now() - start;
@@ -118,16 +124,23 @@ void CWorld::step(const double & timeStep, const double & timeout)
     }
     std::cout << "Performed " << i << " Gauss-Seidel iterations." << std::endl;
 
+    constraintsOK = false;
+    i = 0;
+    while(elapsed_seconds < timeout && !constraintsOK && i<maxIter)
+    {
+
+        for( auto it = m_shapeMatchingConstraints.begin(); it<m_shapeMatchingConstraints.end(); ++it)
+        {
+            constraintsOK = (*it)->project();
+        }
+
+        elapsed = std::chrono::high_resolution_clock::now() - start;
+        elapsed_seconds = (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()) / double(1000.0);
+        ++i;
+    }
+
     updatePositionsWithPredPositions(timeStep);
 
-}
-
-void CWorld::copyPermanentConstraints()
-{
-    for (auto it = m_permanentConstraints.begin(); it<m_permanentConstraints.end(); ++it )
-    {
-        m_constraints.push_back(*it);
-    }
 }
 
 void CWorld::clearExternalForces()
@@ -155,7 +168,13 @@ void CWorld::updatePositionsWithPredPositions( double timeStep )
 
 bool CWorld::gaussSeidelSolver() {
     bool res = true;
+
     for( auto it = m_constraints.begin(); it<m_constraints.end(); ++it)
+    {
+        res = res && (*it)->project();
+    }
+
+    for( auto it = m_permanentConstraints.begin(); it<m_permanentConstraints.end(); ++it)
     {
         res = res && (*it)->project();
     }

@@ -9,164 +9,66 @@
 #include <vector>
 #include <chrono>
 #include <iostream>
+#include <fstream>
 #include <CVector3.hpp>
 #include <physics/CParticle.hpp>
 #include <physics/CParticleSystem.h>
 #include <physics/CConstraint.hpp>
 #include <physics/CWorld.h>
+#include <sstream>
+
+#include <Common.h>
+#define _HCD_ENABLE_SAFE_CHECKS_
+#include <Octree.hpp>
+#include <PointSetNode.hpp>
+
 
 
 namespace PBD
 {
 
-//void getIJFromIdx(size_t idx, const std::vector<size_t> &layout, size_t &i, size_t &j)
-//{
-//    size_t lidx = 0;
-//    while(idx > layout[lidx])
+
+template<typename T_real=double>
+void addParticleSystemInternalConstraints(
+        PBD::CWorld* pWorld,
+        const size_t& partIdxIni,
+        const size_t& partIdxEnd
+)
+{
+
+    //USING SHAPE MATCHING
+    std::vector< CParticle<>* > particles;
+    for (size_t i=partIdxIni; i<partIdxEnd ; ++i) {
+        particles.push_back(pWorld->m_particles[i].get());
+    }
+    pWorld->m_shapeMatchingConstraints.emplace_back( PBD::CShapeMatchingConstraint<>::Ptr(
+            new PBD::CShapeMatchingConstraint<>(particles)
+    ));
+
+    //USING DISTANCE CONSTRAINTS
+//    for (size_t i=partIdxIni; i<partIdxEnd ; ++i)
 //    {
-//        idx -= layout[lidx];
-//        lidx++;
-//    }
-//
-//    i=lidx;
-//    j=idx;
-//}
-//
-//bool collision(CParticle<>* p1, CParticle<>* p2)
-//{
-////    vec3::Vector3<> pos1 = p1->getPosition();
-////    vec3::Vector3<> pos2 = p2->getPosition();
-////    vec3::Vector3<> diff = pos1 - pos2;
-//    //if (p1->getGroup() == p2->getGroup()) return false;
-//
-//    double distance = (p1->getPosition() - p2->getPosition()).norm();
-//    double partSize = (p1->getSize()+p2->getSize())*0.5;
-//    return distance+0.00001 <= partSize;
-//}
-//
-//
-//template<typename T_real=double>
-//void generateInternalConstraints(
-//        std::vector< CParticleSystem<>::Ptr > &   particleSystems,
-//        std::vector< CConstraint<>::Ptr >    &   constraints
-//)
-//{
-//    for (const auto & pS:particleSystems)
-//    {
-//        for (const auto & iConst:pS->m_internalConstraints)
+//        for (size_t j=i; j<partIdxEnd; ++j)
 //        {
-//            constraints.push_back(iConst);
+//            CParticle<>* p1 = pWorld->m_particles[i].get();
+//            CParticle<>* p2 = pWorld->m_particles[j].get();
+//            T_real distance = p1->m_size + p1->m_size + PBD::constraintEpsilon;
+//
+//            if( (p1->m_position - p2->m_position).norm() <= distance )
+//
+//                pWorld->m_permanentConstraints.emplace_back(
+//                        CConstantDistanceConstraint<>::Ptr(
+//                                new CConstantDistanceConstraint<T_real>(p1,p2)
+//                        )
+//                );
 //        }
 //    }
-//}
-//
-//
-//template<typename T_real=double>
-//void generateCollisionConstraints(
-//        std::vector< CParticleSystem<>::Ptr > &   particleSystems,
-//        std::vector< CConstraint<>::Ptr >    &   constraints
-//)
-//{
-//
-//    //TODO: Broad phase (use particle system bounding boxes)
-//
-//
-//    //Narrow phase (detect collisions between particle systems that might be in contact)
-//    //Create non-penetration constraints among each penetrating point-pair
-//    std::vector< size_t > numParticles(particleSystems.size());
-//    size_t totalParticles = 0;
-//    for (uint i=0; i<particleSystems.size(); ++i)
-//    {
-//        numParticles[i] = particleSystems[i]->m_particles.size();
-//        totalParticles += numParticles[i];
-//    }
-//
-//    for (uint i=0; i<totalParticles; ++i)
-//    {
-//        for(uint j=i+1; j<totalParticles; ++j)
-//        {
-//            size_t p1_i,p1_j;
-//            size_t p2_i,p2_j;
-//
-//            //Derreference particle number i to its actual particleSystem k and position l inside the particle system
-//            getIJFromIdx(i,numParticles,p1_i,p1_j);
-//            getIJFromIdx(j,numParticles,p2_i,p2_j);
-//
-//            //Obtain the pointer to the indexed particles
-//            CParticle<>* p1 = &(particleSystems[p1_i]->m_particles[p1_j]);
-//            CParticle<>* p2 = &(particleSystems[p2_i]->m_particles[p2_j]);
-//
-//            //Create a non-penetration constraint if the particles are in contact
-//            if (collision(p1,p2))
-//            {
-//                p1->setCollision(true);
-//                p2->setCollision(true);
-//                constraints.emplace_back( CConstraint<>::Ptr( new CNoPenetrationConstraint<T_real>(p1,p2) ) );
-//            }
-//        }
-//    }
-//
-//}
-//
-//template<typename T_real=double>
-//bool projectConstraints( std::vector< CConstraint<>::Ptr > & constraints)
-//{
-//    bool res = true;
-//
-//    for (auto &C:constraints)
-//    {
-//            res = res && C->project();
-//    }
-//    return res;
-//}
-//
-//
-//
-//template<typename T_real=double>
-//void positionBasedDynamicsStep(
-//        std::vector< CParticleSystem<>::Ptr >   &   particleSystems,
-//        const T_real                            &   timeStep,
-//        const T_real                            &   timeout
-//)
-//{
-//    auto start = std::chrono::high_resolution_clock::now();
-//    auto elapsed = std::chrono::high_resolution_clock::now() - start;
-//    T_real elapsed_seconds = (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()) / T_real(1000.0);
-//
-//    //Update velocity and position for each particle system
-//    for (uint p=0; p<particleSystems.size(); ++p)
-//    {
-//        particleSystems[p]->symplecticEulerUpdate(timeStep);
-//        particleSystems[p]->clearExtForces();
-//    }
-//
-//    std::vector< CConstraint<>::Ptr > constraints;
-//
-//    generateCollisionConstraints(particleSystems , constraints);
-//    //generateInternalConstraints (particleSystems , constraints);
-//
-//    std::cout << "Generated " << constraints.size() << " collision constraints" << std::endl;
-//    for (uint p=0; p<particleSystems.size(); ++p)
-//        std::cout << "Generated " << particleSystems[p]->m_internalConstraints.size() << " internal constraints" << std::endl;
-//
-//
-//    bool constraintsOK = false;
-//    while(elapsed_seconds < timeout && !constraintsOK)
-//    {
-//        constraintsOK = projectConstraints(constraints);
-//        for (uint p=0; p<particleSystems.size(); ++p)
-//        {
-//            constraintsOK = constraintsOK && projectConstraints(particleSystems[p]->m_internalConstraints);
-//        }
-//        elapsed = std::chrono::high_resolution_clock::now() - start;
-//        elapsed_seconds = (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()) / T_real(1000.0);
-//    }
-//
-//    for (uint p=0; p<particleSystems.size(); ++p)
-//    {
-//        particleSystems[p]->updatePositionsWithPredPositions(timeStep);
-//    }
-//}
+
+
+
+}
+
+
 
 template<typename T_real=double>
 void createParticleSystemSolidCube(
@@ -195,25 +97,126 @@ void createParticleSystemSolidCube(
 
     size_t partIdxEnd = pWorld->m_particles.size();
 
-    //Add distance constraints pairwise
+    //Add internal distance constraints to mantain structure
     if (partWeigth != 0)
     {
-        for (size_t i=partIdxIni; i<partIdxEnd ; ++i)
-        {
-            for (size_t j=i+1; j<partIdxEnd; ++j)
-            {
-                CParticle<>* p1 = pWorld->m_particles[i].get();
-                CParticle<>* p2 = pWorld->m_particles[j].get();
+        addParticleSystemInternalConstraints(pWorld, partIdxIni, partIdxEnd);
+    }
 
-                pWorld->m_permanentConstraints.emplace_back(
-                        CConstantDistanceConstraint<>::Ptr( new CConstantDistanceConstraint<T_real>(p1,p2)
-                        )
-                );
+}
+
+template<typename T_real=double>
+void createParticleSystemSolidSphere(
+        const vec3::Vector3<T_real>& pos,
+        const T_real& radius,
+        PBD::CWorld* pWorld,
+        T_real partSize=T_real(0.05),
+        T_real partWeigth=T_real(0.01),
+        size_t partGroup=0)
+{
+    T_real epsilon = 0.001;
+
+    size_t partIdxIni = pWorld->m_particles.size();
+
+    for(double i=-radius; i<radius; i+=partSize+epsilon )
+    {
+        for(double j=-radius; j<radius; j+=partSize+epsilon )
+        {
+            for (double k =-radius; k < radius; k+= partSize+epsilon)
+            {
+                if (std::sqrt(i*i+j*j+k*k) <= radius)
+                pWorld->m_particles.emplace_back( PBD::CParticle<>::Ptr(
+                        new PBD::CParticle<T_real>(i+pos(0),j+pos(1),k+pos(2),partWeigth,partSize,partGroup)));
             }
         }
     }
 
+
+    size_t partIdxEnd = pWorld->m_particles.size();
+
+    //Add internal distance constraints to mantain structure
+    if (partWeigth != 0)
+    {
+        addParticleSystemInternalConstraints(pWorld, partIdxIni, partIdxEnd);
+    }
+
 }
+
+
+
+template<typename T_real=double>
+void createParticleSystemFromASCIIXYZPointCloud(
+        const vec3::Vector3<T_real>& pos,
+        const std::string& filename,
+        PBD::CWorld* pWorld,
+        T_real partSize=T_real(0.05),
+        T_real partWeigth=T_real(0.01),
+        size_t partGroup=0,
+        T_real scale = T_real(1.0))
+{
+    std::ifstream infile(filename);
+    if ( !infile.is_open() )
+    {
+        return;
+    }
+
+    std::cout << "Creating particle system from file: " << filename << std::endl;
+
+    size_t partIdxIni = pWorld->m_particles.size();
+    std::string line;
+    HCD::TOctree< T_real , HCD::TPointSetNode< T_real > , T_real > Octree;
+    while ( std::getline(infile, line)  )
+    {
+        std::stringstream lineStream;
+        lineStream << line;
+        T_real x,y,z;
+        lineStream >> x;
+        lineStream >> y;
+        lineStream >> z;
+        //TODO: Solid voxelization. Add internal voxels to the tree.
+        //_GENERIC_DEBUG_("Add particle [" + std::to_string(x) + " , "+ std::to_string(y) + " , "+ std::to_string(z) + "] ");
+        //Construct and octree with the particle size
+        HCD::TVector3D<T_real> point (x * scale,y * scale,z * scale);
+        Octree.Insert(point, partSize);
+        //Octree.Insert(x,y,z, partSize);   //TODO: Tell David this does not work in the HCD version I have
+    }
+
+    std::deque< HCD::TOctreeNode< T_real , HCD::TPointSetNode< T_real > >* > Nodes = Octree.GetNodes();
+
+    _GENERIC_DEBUG_("Octree nodes loaded: " + std::to_string(Nodes.size()));
+
+
+    for (auto pOctreeNode : Nodes)
+    {
+        if (pOctreeNode->IsOuter())
+        {
+            T_real x = pOctreeNode->GetCenter().m_X;
+            T_real y = pOctreeNode->GetCenter().m_Y;
+            T_real z = pOctreeNode->GetCenter().m_Z;
+
+            pWorld->m_particles.emplace_back(
+                    PBD::CParticle<>::Ptr(
+                            new PBD::CParticle<T_real>(x+pos(0),y+pos(1),z+pos(2),partWeigth,partSize,partGroup)
+                    )
+            );
+        }
+    }
+
+    size_t partIdxEnd = pWorld->m_particles.size();
+
+    std::cout << "Loaded " << partIdxEnd -partIdxIni << " particles" << std::endl;
+
+    //Add internal distance constraints to mantain structure
+    if (partWeigth != 0)
+    {
+        addParticleSystemInternalConstraints(pWorld, partIdxIni, partIdxEnd);
+    }
+
+    std::cout << "Created constraints." << std::endl;
+
+}
+
+
 
 } //namespace PBD
 

@@ -15,7 +15,7 @@ int main( int argc, char** argv)
     T_real simTimeSeconds = 5.0;
 
     PBD::CWorld PBDWorld;
-    PBDWorld.m_gravity = Vector3(0,0,-9.81);
+    PBDWorld.m_gravity = Eigen::Vector3d(0,0,-9.81);
 
     std::cout<<"Creating objects"<<std::endl;
     PBDCreateObjects(&PBDWorld);
@@ -36,8 +36,8 @@ void PBDCreateObjects( PBD::CWorld* pWorld )
     std::cout<<"Creating objects"<<std::endl;
 
     //Create cube objects                         position              dimensions             partSize partWeight groupId
-    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4) , Vector3(0.2,0.2,0.2), pWorld, 0.1, 0.02, 2);
-    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,3) , Vector3(0.2,0.2,0.2), pWorld, 0.1, 0.01, 1);
+    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4) , Vector3(0.3,0.5,0.2), pWorld, 0.1, 0.02, 2);
+    PBD::createParticleSystemFromASCIIXYZPointCloud(Vector3(0.5,0.5,5) , std::string("/home/labuser/workspace/data/bun_zipper.xyz"), pWorld, 0.1, 0.02, 1);
 
     //Create a cube 5x5x0.05 m size with 5cm particles centered at 0,0,0 (This will be the floor)
     PBD::createParticleSystemSolidCube<T_real>(Vector3(-1.5,-1.5,0) , Vector3(3,3,0.1), pWorld, 0.1, 0, 0);

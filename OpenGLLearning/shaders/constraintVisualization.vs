@@ -18,5 +18,5 @@ void main()
 {
     gl_PointSize = pointSize;
     gl_Position = projection * view * model * vec4(position, 1.0f);
-    vs_out.color = color; 
+    vs_out.color = color;
 }

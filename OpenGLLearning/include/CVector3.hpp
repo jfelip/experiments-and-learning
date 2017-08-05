@@ -103,32 +103,6 @@ namespace vec3
             return *this;
         }
 
-        Vector3 operator-( const Vector3& right )
-        {
-            return Vector3(
-                    m_data[0] - right(0),
-                    m_data[1] - right(1),
-                    m_data[2] - right(2)
-            );
-        }
-
-        Vector3 operator+( const Vector3& right )
-        {
-            return Vector3(
-                    m_data[0] + right(0),
-                    m_data[1] + right(1),
-                    m_data[2] + right(2)
-            );
-        }
-
-        Vector3 operator*( const T_Real& right )
-        {
-            return Vector3(
-                    m_data[0] * right,
-                    m_data[1] * right,
-                    m_data[2] * right
-            );
-        }
 
         Vector3& operator-=( const Vector3& right )
         {
@@ -171,45 +145,76 @@ namespace vec3
 
 
     template<typename T>
-    Vector3<T> operator*(const Vector3<T>& rht, const Vector3<T>& lht)
+    Vector3<T> operator*(const Vector3<T>& lht, const Vector3<T>& rht)
     {
-        Vector3<T> result;
-        result[0] = rht(0) * lht(0);
-        result[1] = rht(1) * lht(1);
-        result[2] = rht(2) * lht(2);
-        return result;
+        return Vector3<T>(lht(0) * rht(0), lht(1) * rht(1), lht(2) * rht(2));
     }
 
     template<typename T>
-    Vector3<T> operator*(const Vector3<T>& rht, const T& lht)
+    Vector3<T> operator*(const Vector3<T>& lht,  const T& rht)
     {
-        Vector3<T> result;
-        result[0] = rht(0) * lht;
-        result[1] = rht(1) * lht;
-        result[2] = rht(2) * lht;
-        return result;
+        return Vector3<T>(lht(0) * rht, lht(1) * rht, lht(2) * rht);
     }
 
     template<typename T>
-    Vector3<T> operator/(const Vector3<T>& rht, const Vector3<T>& lht)
+    Vector3<T> operator*(const T& lht, const Vector3<T>& rht)
     {
-        Vector3<T> result;
-        result[0] = rht(0) / lht(0);
-        result[1] = rht(1) / lht(1);
-        result[2] = rht(2) / lht(2);
-        return result;
+        return Vector3<T>(lht * rht(0), lht * rht(1), lht * rht(2));
     }
 
     template<typename T>
-    Vector3<T> operator/(const Vector3<T>& rht, const T& lht)
+    Vector3<T> operator/(const Vector3<T>& lht, const Vector3<T>& rht)
     {
-        Vector3<T> result;
-        result[0] = rht(0) / lht;
-        result[1] = rht(1) / lht;
-        result[2] = rht(2) / lht;
-        return result;
+        return Vector3<T>(lht(0) / rht(0), lht(1) / rht(1), lht(2) / rht(2));
     }
 
+    template<typename T>
+    Vector3<T> operator/(const Vector3<T>& lht,  const T& rht)
+    {
+        return Vector3<T>(lht(0) / rht, lht(1) / rht, lht(2) / rht);
+    }
+
+    template<typename T>
+    Vector3<T> operator/(const T& lht, const Vector3<T>& rht)
+    {
+        return Vector3<T>(lht / rht(0), lht / rht(1), lht / rht(2));
+    }
+
+    template<typename T>
+    Vector3<T> operator+(const Vector3<T>& lht, const Vector3<T>& rht)
+    {
+        return Vector3<T>(lht(0) + rht(0), lht(1) + rht(1), lht(2) + rht(2));
+    }
+
+    template<typename T>
+    Vector3<T> operator+(const Vector3<T>& lht,  const T& rht)
+    {
+        return Vector3<T>(lht(0) + rht, lht(1) + rht, lht(2) + rht);
+    }
+
+    template<typename T>
+    Vector3<T> operator+(const T& lht, const Vector3<T>& rht)
+    {
+        return Vector3<T>(lht + rht(0), lht + rht(1), lht + rht(2));
+    }
+
+    template<typename T>
+    Vector3<T> operator-(const Vector3<T>& lht, const Vector3<T>& rht)
+    {
+        return Vector3<T>(lht(0) - rht(0), lht(1) - rht(1), lht(2) - rht(2));
+    }
+
+    template<typename T>
+    Vector3<T> operator-(const Vector3<T>& lht,  const T& rht)
+    {
+        return Vector3<T>(lht(0) - rht, lht(1) - rht, lht(2) - rht);
+    }
+
+    template<typename T>
+    Vector3<T> operator-(const T& lht, const Vector3<T>& rht)
+    {
+        return Vector3<T>(lht - rht(0), lht - rht(1), lht - rht(2));
+    }
 
     template<typename T>
     std::ostream& operator<<(std::ostream& os, const Vector3<T>& t)

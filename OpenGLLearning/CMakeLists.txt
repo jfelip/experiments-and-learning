@@ -25,9 +25,10 @@ set(SOURCE_FILES
         include/primitives/CSolidArrow.h
         include/primitives/CReferenceFrame.h
         include/primitives/CParticleSystem.h
+        include/primitives/CParticleSystemSpheres.h
         src/OpenGLLearning.cpp)
 
-include_directories(include ../PBD/include)
+include_directories(include ../PBD/include ../../HCD /usr/include/eigen3)
 
 link_libraries(glfw GLEW GL)
 

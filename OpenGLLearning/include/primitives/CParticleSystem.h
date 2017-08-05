@@ -15,9 +15,16 @@
 template<typename T_real=double, typename T_vertex=GLfloat>
 class CGLParticleSystem
 {
+public:
 	typedef std::shared_ptr<CGLParticleSystem> Ptr;
 
 	typedef std::shared_ptr<CGLParticleSystem> ConstPtr;
+
+    typedef enum
+    {
+        POINTS,
+        SPHERES
+    } DRAW_PRIMITIVE;
 
 public:
     CGLParticleSystem();
@@ -26,9 +33,7 @@ public:
 
     bool updateBuffers();
 
-    bool updateConstraintBuffers();
-
-    bool draw(Shader *shader);
+    bool draw(Shader *shader, Shader *constraintShader);
 
     GLuint getPontSize(){ return m_pointSize;}
 
@@ -84,14 +89,26 @@ public:
 
     void showConstraints( bool c) { m_drawConstraints = c; }
 
+    void setDrawPrimitive( DRAW_PRIMITIVE p ){ m_drawPrimitive = p; }
+
+    DRAW_PRIMITIVE getDrawPrimitive( ){ return m_drawPrimitive; }
+
+    bool addEigenVectorsAndCoMtoVertexBuffer( Eigen::Vector3d CoM, Eigen::Matrix3d cov, T_real colorMult = T_real(1.0));
+
 protected:
+    bool updateBuffersPoints();
+
+    bool updateConstraintBuffers();
+
     PBD::CWorld* m_pPSystem;
 
     std::vector<T_vertex> m_colors;
 
     std::vector<T_vertex> m_vertexBufferData;
 
-    GLuint m_pointSize;
+    std::vector<T_vertex> m_vertexBufferDataPoints;
+
+    T_real m_pointSize;
 
     CTransform<T_real> m_transform;
 
@@ -101,6 +118,10 @@ protected:
 
     bool m_drawConstraints = false;
 
+    DRAW_PRIMITIVE m_drawPrimitive = DRAW_PRIMITIVE::POINTS;
+
+    std::vector<T_real> m_unitSphereVertices;
+    std::vector<T_real> m_unitSphereNormals;
 };
 
 
@@ -112,7 +133,17 @@ CGLParticleSystem<T_real,T_vertex>::CGLParticleSystem()
     glGenBuffers(1, &VBO);
     glGenVertexArrays(1, &VAOConstraints);
     glGenBuffers(1, &VBOConstraints);
-	m_pointSize = 1;
+	m_pointSize = 1.0;
+
+    //Create vertices for a sphere
+    CSolidSphere<T_real,T_vertex> s;
+    s.setRadius(1.0);
+    s.setAlphaResolution(6);
+    s.setBetaResolution (6);
+    s.generateVertexData();
+    m_unitSphereVertices = s.getVertices();
+    m_unitSphereNormals = s.getNormals();
+
 }
 
 template<class T_real, class T_vertex>
@@ -126,6 +157,19 @@ CGLParticleSystem<T_real,T_vertex>::~CGLParticleSystem()
 
 template<class T_real, class T_vertex>
 bool CGLParticleSystem<T_real,T_vertex>::updateBuffers()
+{
+    updateBuffersPoints();
+
+    if (m_drawConstraints)
+    {
+        updateConstraintBuffers();
+    }
+
+};
+
+
+template<class T_real, class T_vertex>
+bool CGLParticleSystem<T_real,T_vertex>::updateBuffersPoints()
 {
 
     if( m_colors.size()*3 != m_pPSystem->m_particles.size())
@@ -144,17 +188,17 @@ bool CGLParticleSystem<T_real,T_vertex>::updateBuffers()
         }
     }
 
-    m_vertexBufferData.clear();
+    m_vertexBufferDataPoints.clear();
 	uint i=0;
     for (uint p=0; p<m_pPSystem->m_particles.size() ; ++p)
     {
-        m_vertexBufferData.push_back(m_pPSystem->m_particles[p]->m_position(0));
-        m_vertexBufferData.push_back(m_pPSystem->m_particles[p]->m_position(1));
-        m_vertexBufferData.push_back(m_pPSystem->m_particles[p]->m_position(2));
+        m_vertexBufferDataPoints.push_back(m_pPSystem->m_particles[p]->m_position(0));
+        m_vertexBufferDataPoints.push_back(m_pPSystem->m_particles[p]->m_position(1));
+        m_vertexBufferDataPoints.push_back(m_pPSystem->m_particles[p]->m_position(2));
 
-		m_vertexBufferData.push_back(m_colors[i]);
-		m_vertexBufferData.push_back(m_colors[i+1]);
-		m_vertexBufferData.push_back(m_colors[i+2]);
+        m_vertexBufferDataPoints.push_back(m_colors[i]);
+        m_vertexBufferDataPoints.push_back(m_colors[i+1]);
+        m_vertexBufferDataPoints.push_back(m_colors[i+2]);
 
 		i += 3;
 	}
@@ -163,7 +207,7 @@ bool CGLParticleSystem<T_real,T_vertex>::updateBuffers()
 	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
 	glBindVertexArray(VAO);
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(T_vertex) * m_vertexBufferData.size(), m_vertexBufferData.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(T_vertex) * m_vertexBufferDataPoints.size(), m_vertexBufferDataPoints.data(), GL_STATIC_DRAW);
 
 		//TODO: Change the GL_FLOAT type according to the T_vertex template
 		//position
@@ -177,12 +221,6 @@ bool CGLParticleSystem<T_real,T_vertex>::updateBuffers()
 		glBindBuffer(GL_ARRAY_BUFFER, 0); // Note that this is allowed, the call to glVertexAttribPointer registered VBO as the currently bound vertex buffer object so afterwards we can safely unbind
 	glBindVertexArray(0); // Unbind VAO (it's always a good thing to unbind any buffer/array to prevent strange bugs)
 
-
-    if (m_drawConstraints)
-    {
-        updateConstraintBuffers();
-    }
-
 	return true;
 }
 
@@ -190,6 +228,8 @@ template<class T_real, class T_vertex>
 bool CGLParticleSystem<T_real,T_vertex>::updateConstraintBuffers()
 {
     m_vertexBufferData.clear();
+
+    //CREATE LINES FOR CONTACT CONSTRAINTS
     for (uint p=0; p<m_pPSystem->m_constraints.size() ; ++p)
     {
         m_vertexBufferData.push_back(m_pPSystem->m_constraints[p]->m_particles[0]->m_position(0));
@@ -227,8 +267,58 @@ bool CGLParticleSystem<T_real,T_vertex>::updateConstraintBuffers()
         }
     }
 
+    //CREATE LINES FOR PERMANENT CONSTRAINTS
+    for (uint p=0; p<m_pPSystem->m_permanentConstraints.size() ; ++p)
+    {
+        m_vertexBufferData.push_back(m_pPSystem->m_permanentConstraints[p]->m_particles[0]->m_position(0));
+        m_vertexBufferData.push_back(m_pPSystem->m_permanentConstraints[p]->m_particles[0]->m_position(1));
+        m_vertexBufferData.push_back(m_pPSystem->m_permanentConstraints[p]->m_particles[0]->m_position(2));
 
-    // Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
+        if (m_pPSystem->m_permanentConstraints[p]->isSatisfied())
+        {
+            m_vertexBufferData.push_back(0);
+            m_vertexBufferData.push_back(1);
+            m_vertexBufferData.push_back(0);
+        }
+        else
+        {
+            m_vertexBufferData.push_back(1);
+            m_vertexBufferData.push_back(0);
+            m_vertexBufferData.push_back(0);
+        }
+
+        m_vertexBufferData.push_back(m_pPSystem->m_permanentConstraints[p]->m_particles[1]->m_position(0));
+        m_vertexBufferData.push_back(m_pPSystem->m_permanentConstraints[p]->m_particles[1]->m_position(1));
+        m_vertexBufferData.push_back(m_pPSystem->m_permanentConstraints[p]->m_particles[1]->m_position(2));
+
+        if (m_pPSystem->m_permanentConstraints[p]->isSatisfied())
+        {
+            m_vertexBufferData.push_back(0);
+            m_vertexBufferData.push_back(1);
+            m_vertexBufferData.push_back(0);
+        }
+        else
+        {
+            m_vertexBufferData.push_back(1);
+            m_vertexBufferData.push_back(0);
+            m_vertexBufferData.push_back(0);
+        }
+    }
+
+    //CREATE LINES FOR SHAPE MATCHING CONSTRAINTS
+    for (uint p=0; p<m_pPSystem->m_shapeMatchingConstraints.size() ; ++p)
+    {
+
+        addEigenVectorsAndCoMtoVertexBuffer( m_pPSystem->m_shapeMatchingConstraints[p]->getCoM(),
+                                             m_pPSystem->m_shapeMatchingConstraints[p]->getCovMat(), 1.0  );
+
+        addEigenVectorsAndCoMtoVertexBuffer( m_pPSystem->m_shapeMatchingConstraints[p]->getDeformedCoM()*1.01,
+                                             m_pPSystem->m_shapeMatchingConstraints[p]->getDeformedCovMat(), 0.2  );
+
+    }
+
+
+        // Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
     glBindVertexArray(VAOConstraints);
     glBindBuffer(GL_ARRAY_BUFFER, VBOConstraints);
     glBufferData(GL_ARRAY_BUFFER, sizeof(T_vertex) * m_vertexBufferData.size(), m_vertexBufferData.data(), GL_DYNAMIC_DRAW);
@@ -250,30 +340,108 @@ bool CGLParticleSystem<T_real,T_vertex>::updateConstraintBuffers()
 
 
 template<class T_real, class T_vertex>
-bool CGLParticleSystem<T_real,T_vertex>::draw(Shader *shader)
+bool CGLParticleSystem<T_real,T_vertex>::addEigenVectorsAndCoMtoVertexBuffer( Eigen::Vector3d CoM, Eigen::Matrix3d cov, const T_real colorMult)
 {
-    shader->Use();
+    //Vertex 1 of the first eigenvector
+    m_vertexBufferData.push_back( CoM[0] );
+    m_vertexBufferData.push_back( CoM[1] );
+    m_vertexBufferData.push_back( CoM[2] );
+
+    m_vertexBufferData.push_back(1*colorMult);
+    m_vertexBufferData.push_back(0);
+    m_vertexBufferData.push_back(0);
+
+    //Vertex 2 of the first eigenvector
+    m_vertexBufferData.push_back( cov.col(0)[0] + CoM[0] );
+    m_vertexBufferData.push_back( cov.col(0)[1] + CoM[1] );
+    m_vertexBufferData.push_back( cov.col(0)[2] + CoM[2] );
+
+    m_vertexBufferData.push_back(1*colorMult);
+    m_vertexBufferData.push_back(0);
+    m_vertexBufferData.push_back(0);
+
+    //Vertex 1 of the SECOND eigenvector
+    m_vertexBufferData.push_back( CoM[0] );
+    m_vertexBufferData.push_back( CoM[1] );
+    m_vertexBufferData.push_back( CoM[2] );
+
+    m_vertexBufferData.push_back(0);
+    m_vertexBufferData.push_back(1*colorMult);
+    m_vertexBufferData.push_back(0);
+
+    //Vertex 2 of the SECOND eigenvector
+    m_vertexBufferData.push_back( cov.col(1)[0] + CoM[0] );
+    m_vertexBufferData.push_back( cov.col(1)[1] + CoM[1] );
+    m_vertexBufferData.push_back( cov.col(1)[2] + CoM[2] );
+
+    m_vertexBufferData.push_back(0);
+    m_vertexBufferData.push_back(1*colorMult);
+    m_vertexBufferData.push_back(0);
+
+    //Vertex 1 of the THIRD eigenvector
+    m_vertexBufferData.push_back( CoM[0] );
+    m_vertexBufferData.push_back( CoM[1] );
+    m_vertexBufferData.push_back( CoM[2] );
+
+    m_vertexBufferData.push_back(0);
+    m_vertexBufferData.push_back(0);
+    m_vertexBufferData.push_back(1*colorMult);
+
+    //Vertex 2 of the THIRD eigenvector
+    m_vertexBufferData.push_back( cov.col(2)[0] + CoM[0] );
+    m_vertexBufferData.push_back( cov.col(2)[1] + CoM[1] );
+    m_vertexBufferData.push_back( cov.col(2)[2] + CoM[2] );
+
+    m_vertexBufferData.push_back(0);
+    m_vertexBufferData.push_back(0);
+    m_vertexBufferData.push_back(1*colorMult);
+
+};
+
+
+template<class T_real, class T_vertex>
+bool CGLParticleSystem<T_real,T_vertex>::draw(Shader *shader, Shader *constraintShader)
+{
     //Update transformation matrix
     m_transform.m_data.computeMatrix();
 
-    GLuint pointSize = glGetUniformLocation(shader->Program, "pointSize");
+    glEnable(GL_VERTEX_PROGRAM_POINT_SIZE_NV);
+    glEnable(GL_POINT_SPRITE_ARB);
+
+    glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
+    glTexEnvi(GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE);
+
+    glDepthMask(GL_TRUE);
+
+    shader->Use();
+    GLuint SphereRadiusLoc = glGetUniformLocation(shader->Program, "SphereRadius");
     GLuint transformLoc = glGetUniformLocation(shader->Program, "model");
+    glUniformMatrix4fv(transformLoc, 1,GL_FALSE, m_transform.m_data.m_pMatrix);
+    glUniform1f(SphereRadiusLoc, m_pPSystem->m_particles[0]->m_size/2.0);
+
+    constraintShader->Use();
+    GLuint pointSize = glGetUniformLocation(constraintShader->Program, "pointSize");
+    transformLoc = glGetUniformLocation(constraintShader->Program, "model");
     glUniformMatrix4fv(transformLoc, 1,GL_FALSE, m_transform.m_data.m_pMatrix);
     glUniform1ui(pointSize,m_pointSize);
 
+    shader->Use();
     glBindVertexArray(VAO);
-    glDrawArrays(GL_POINTS, 0, m_pPSystem->m_particles.size());
+    glDrawArrays(GL_POINTS, 0, m_vertexBufferDataPoints.size() / 6);
     glBindVertexArray(0);
+
+    glDisable(GL_POINT_SPRITE_ARB);
+
 
     if (m_drawConstraints)
     {
+        constraintShader->Use();
         glBindVertexArray(VAOConstraints);
-        glDrawArrays(GL_LINES, 0, m_pPSystem->m_constraints.size()*2);
+        glDrawArrays(GL_LINES, 0, m_vertexBufferData.size() / 6);
         glBindVertexArray(0);
     }
 
     return true;
 }
-
 
 #endif

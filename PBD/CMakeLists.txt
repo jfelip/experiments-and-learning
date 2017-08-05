@@ -3,7 +3,12 @@ project(PBD)
 
 set(CMAKE_CXX_STANDARD 11)
 
-include_directories(include)
+include_directories(
+        include
+        ../../HCD
+        /usr/include/eigen3
+)
+
 
 set(SOURCE_FILES
         include/Common.h

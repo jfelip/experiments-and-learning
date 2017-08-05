@@ -4,14 +4,14 @@
 #include <memory>
 #include <vector>
 #include <CVector3.hpp>
+#include <Eigen/Dense>
 
 namespace PBD {
 
     const static double minVel = 0.001;
     const static double velDamping = 0.99;
 
-
-    template<typename T_real=double>
+template<typename T_real=double, typename T_vector=Eigen::Vector3d>
 class CParticle
 {
 public:
@@ -23,9 +23,9 @@ public:
     CParticle() = default;
 
     CParticle(const T_real& x, const T_real& y, const T_real& z, const T_real& mass, const T_real& size, const size_t& group=0):
-            m_position( vec3::Vector3<T_real>(x,y,z) ),
-            m_velocity( vec3::Vector3<T_real>(0,0,0) ),
-            m_extForce( vec3::Vector3<T_real>(0,0,0) ),
+            m_position( T_vector(x,y,z) ),
+            m_velocity( T_vector(0,0,0) ),
+            m_extForce( T_vector(0,0,0) ),
             m_mass(mass),
             m_massInv(1/mass),
             m_size(size),
@@ -39,9 +39,9 @@ public:
               const T_real& vx,   const T_real& vy, const T_real& vz,
               const T_real& mass, const T_real& size,
               const size_t& group=0):
-            m_position( vec3::Vector3<T_real>(x,y,z) ),
-            m_velocity( vec3::Vector3<T_real>(vx,vy,vz) ),
-            m_extForce( vec3::Vector3<T_real>(0,0,0) ),
+            m_position( T_vector(x,y,z) ),
+            m_velocity( T_vector(vx,vy,vz) ),
+            m_extForce( T_vector(0,0,0) ),
             m_mass(mass),
             m_massInv(1/mass),
             m_size(size),
@@ -51,8 +51,8 @@ public:
 
     }
 
-    CParticle(const vec3::Vector3<T_real>& pos,
-              const vec3::Vector3<T_real>& vel,
+    CParticle(const T_vector& pos,
+              const T_vector& vel,
               const T_real& mass, const T_real& size,
               const size_t& group=0):
             m_position( pos ),
@@ -129,7 +129,7 @@ public:
 
     T_real getMassInv( ) const { return m_massInv; }
 
-    void clearExtForces() { m_extForce = vec3::Vector3<T_real>(0,0,0); }
+    void clearExtForces() { m_extForce = T_vector(0,0,0); }
 
     void symplecticEulerUpdate(T_real timeStep)
     {
@@ -155,15 +155,15 @@ public:
         }
         else
         {
-            m_velocity = (m_predPosition - m_position) / timeStep;
+            m_velocity = ((m_predPosition - m_position) / timeStep) * 0.99;
             m_position = m_predPosition;
         }
     }
 
-    vec3::Vector3<T_real> m_position;
-    vec3::Vector3<T_real> m_predPosition;
-    vec3::Vector3<T_real> m_velocity;
-    vec3::Vector3<T_real> m_extForce;
+    T_vector m_position;
+    T_vector m_predPosition;
+    T_vector m_velocity;
+    T_vector m_extForce;
     T_real m_size;
     size_t m_group;
     bool m_collision;

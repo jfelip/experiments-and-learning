@@ -35,6 +35,7 @@
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void Do_Movement();
 
 //PBD Definitions
@@ -45,24 +46,27 @@ void PBDCreateObjects( PBD::CWorld* pWorld );
 
 template<typename T>
 void projectionMatrix(T angle, T ratio, T near, T far, T mat[16]);
-
 // Camera
-Camera<GLfloat> camera(vec3::Vector3<GLfloat>(4.0f, -1.0f, -2.0f),  vec3::Vector3<GLfloat>(0.0f, 1.0f, 0.0f), M_PI,0);
+Camera<GLfloat> camera(vec3::Vector3<GLfloat>(-0.869274, -6.23219, 0.324705),  vec3::Vector3<GLfloat>(0.0f, 1.0f, 0.0f), -4.67593, 1.12335);
 bool keys[1024];
+bool mouse[3];
 GLfloat lastX = 400, lastY = 300;
+GLfloat xoffset =0 , yoffset = 0;
 bool firstMouse = true;
 
 GLfloat deltaTime = 0.0f;
 
 GLfloat lastFrame = 0.0f;
 // Window dimensions
-const GLuint WIDTH = 800, HEIGHT = 600;
+const GLuint WIDTH = 1000, HEIGHT = 800;
 
-bool wireframeMode = false;
-bool normalMode = false;
-bool constraintMode = false;
-bool simStepKey = false;
-bool simEnabled = false;
+bool g_wireframeMode = false;
+bool g_normalMode = false;
+bool g_constraintMode = true;
+bool g_simStepKey = false;
+bool g_simEnabled = false;
+bool g_reset = false;
+uint g_pointSize  = 10;
 
 // The MAIN function, from here we start the application and run the game loop
 int main()
@@ -86,6 +90,7 @@ int main()
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
 
     // Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
     glewExperimental = GL_TRUE;
@@ -132,11 +137,13 @@ int main()
 
     T_real simStep = 0.005;
     PBD::CWorld PBDWorld;
-    PBDWorld.m_gravity = Vector3(0,0,-9.81);
+    PBDWorld.m_gravity = Eigen::Vector3d(0,0,-9.81);
     PBDCreateObjects( &PBDWorld );
 
     CGLParticleSystem<GLfloat> particleSystemsPointCloud;
-    particleSystemsPointCloud.setPointSize(10);
+    particleSystemsPointCloud.setPointSize(g_pointSize);
+    particleSystemsPointCloud.setDrawPrimitive( CGLParticleSystem<GLfloat>::SPHERES );
+    //particleSystemsPointCloud.setDrawPrimitive( CGLParticleSystem<GLfloat>::POINTS );
     particleSystemsPointCloud.setParticleSystem(&PBDWorld);
     particleSystemsPointCloud.updateBuffers();
 
@@ -177,6 +184,16 @@ int main()
     // Game loop
     while (!glfwWindowShouldClose(window))
     {
+        if (g_reset)
+        {
+            PBDWorld = PBD::CWorld();
+            PBDWorld.m_gravity = Eigen::Vector3d(0,0,-9.81);
+            PBDCreateObjects( &PBDWorld );
+            particleSystemsPointCloud.setParticleSystem(&PBDWorld);
+            particleSystemsPointCloud.updateBuffers();
+            g_reset = false;
+        }
+
     	GLfloat currentFrame = glfwGetTime();
     	deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -186,10 +203,10 @@ int main()
 		Do_Movement();
 
         // PHYSICS ENGINE UPDATE
-        if (simStepKey || simEnabled)
+        if (g_simStepKey || g_simEnabled)
         {
-            PBDWorld.step(simStep,0.1);
-            simStepKey = false;
+            PBDWorld.step(simStep,0.5);
+            g_simStepKey = false;
         }
 
         // Clear the colorbuffer and the depth buffer
@@ -197,7 +214,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Set wireframe or solid mode for polygon drawing
-        if (wireframeMode)
+        if (g_wireframeMode)
         	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         else
         	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -207,7 +224,7 @@ int main()
         GLfloat view[16] = {1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1};
         camera.GetViewMatrix(view);
         GLfloat projection[16] = {1,0,0,0,  0,1,0,0,  0,0,1,0,  0,0,0,1};
-        projectionMatrix<GLfloat>(camera.Zoom, (float)WIDTH/(float)HEIGHT, 0.1f, 1000.0f,projection);
+        projectionMatrix<GLfloat>(camera.Zoom, (float)WIDTH/(float)HEIGHT, 0.001f, 1000.0f,projection);
 
         // Pass view and projection matrices to the shader and viewer position
         ourShader.Use();
@@ -220,10 +237,15 @@ int main()
 
         // Pass view and projection matrices to the point cloud shader
         pointCloudShader.Use();
+        GLint scrWidthLoc = glGetUniformLocation(pointCloudShader.Program, "screenWidth");
+        GLint lightPosLoc = glGetUniformLocation(pointCloudShader.Program, "lightPos");
         viewLoc = glGetUniformLocation(pointCloudShader.Program, "view");
         projLoc = glGetUniformLocation(pointCloudShader.Program, "projection");
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, view);
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
+        glUniform1i(scrWidthLoc, width);
+        //glUniform3f(lightPosLoc, camera.Position.x(),camera.Position.y(),camera.Position.z());
+        glUniform3f(lightPosLoc, 0,0,2);
 
     	//Prepare lights
     	dirLight.use(&ourShader);
@@ -236,9 +258,10 @@ int main()
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, view);
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
 
-        particleSystemsPointCloud.showConstraints(constraintMode);
+        particleSystemsPointCloud.showConstraints(g_constraintMode);
+        particleSystemsPointCloud.setPointSize(g_pointSize);
         particleSystemsPointCloud.updateBuffers();
-        particleSystemsPointCloud.draw(&constraintShader);
+        particleSystemsPointCloud.draw(&pointCloudShader, &constraintShader);
 
     		//Prepare material used by the rendered object
 //    		mat.use(&ourShader);
@@ -248,7 +271,7 @@ int main()
 
 		//TODO: Loop through objects and materials to render the second pass for normals
     		//Prepare material used by the rendered object
-		if (normalMode)
+		if (g_normalMode)
 		{
 			// Pass view and projection matrices to the normal shader and viewer position
 	    	//normalShader.Use();
@@ -299,6 +322,10 @@ void Do_Movement()
         camera.ProcessKeyboard(LEFT, deltaTime);
     if(keys[GLFW_KEY_D])
         camera.ProcessKeyboard(RIGHT, deltaTime);
+    if(keys[GLFW_KEY_Q])
+        camera.ProcessKeyboard(UP, deltaTime);
+    if(keys[GLFW_KEY_E])
+        camera.ProcessKeyboard(DOWN, deltaTime);
 }
 
 // Is called whenever a key is pressed/released via GLFW
@@ -307,15 +334,22 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
     if (key == GLFW_KEY_W && action == GLFW_PRESS)
-    	wireframeMode = !wireframeMode;
+        g_wireframeMode = !g_wireframeMode;
     if (key == GLFW_KEY_N && action == GLFW_PRESS)
-        normalMode = !normalMode;
+        g_normalMode = !g_normalMode;
     if (key == GLFW_KEY_C && action == GLFW_PRESS)
-        constraintMode= !constraintMode;
+        g_constraintMode= !g_constraintMode;
     if (key == GLFW_KEY_ENTER && action == GLFW_PRESS)
-        simStepKey = !simStepKey;
+        g_simStepKey = !g_simStepKey;
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
-        simEnabled = !simEnabled;
+        g_simEnabled = !g_simEnabled;
+    if (key == GLFW_KEY_KP_ADD && action == GLFW_PRESS)
+        g_pointSize++;
+    if (key == GLFW_KEY_KP_SUBTRACT && action == GLFW_PRESS)
+        g_pointSize--;
+    if (key == GLFW_KEY_R && action == GLFW_PRESS)
+        g_reset = true;
+
     if (key >= 0 && key < 1024)
     {
         if(action == GLFW_PRESS)
@@ -327,22 +361,36 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-    if(firstMouse)
-    {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
 
-    GLfloat xoffset = xpos - lastX;
-    GLfloat yoffset = lastY - ypos;  // Reversed since y-coordinates go from bottom to left
+    if (mouse[0])
+    {
+        xoffset = xpos - lastX;
+        yoffset = ypos - lastY;  // Reversed since y-coordinates go from bottom to left
+
+        camera.Yaw += xoffset * 0.001;
+        camera.Pitch -= yoffset * 0.001;
+        camera.updateCameraVectors();
+        //camera.ProcessMouseMovement(xoffset, yoffset);
+    }
 
     lastX = xpos;
     lastY = ypos;
 
-    camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    {
+        mouse[0] = true;
+    }
+
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+    {
+        mouse[0] = false;
+    }
+
+}
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
@@ -357,34 +405,40 @@ void PBDCreateObjects( PBD::CWorld* pWorld )
 
     std::cout<<"Creating objects"<<std::endl;
 
-    //Create cube objects                         position              dimensions             partSize partWeight groupId
-    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4) , Vector3(0.3,0.3,0.3), pWorld, 0.1, 0.02, 2);
-    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,3) , Vector3(0.3,0.3,0.3), pWorld, 0.1, 0.01, 1);
+    //Create cube objects                         position           dimensions             partSize partWeight groupId
+    size_t object1Particle1 = pWorld->m_particles.size();
+    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,1.0,3) , Vector3(0.5,0.8,0.2), pWorld, 0.1, 0.02, 2);
+
+    size_t object2Particle1 = pWorld->m_particles.size();
+    PBD::createParticleSystemFromASCIIXYZPointCloud(Vector3(.5,.5,2) , std::string("/home/labuser/workspace/data/bun_zipper.xyz"), pWorld, 0.1, 0.02, 1, 4.0);
+    //PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,5) , Vector3(0.2,0.2,0.2), pWorld, 0.1, 0.02, 1);
 
     //Create a cube 5x5x0.05 m size with 5cm particles centered at 0,0,0 (This will be the floor)
-    PBD::createParticleSystemSolidCube<T_real>(Vector3(-1.5,-1.5,0) , Vector3(3,3,0.1), pWorld, 0.1, 0, 0);
+    PBD::createParticleSystemSolidCube<T_real>(Vector3(0,0,0) , Vector3(2,2,0.1), pWorld, 0.1, 0, 0);
 
     //Hang one object with a distance constraint from a point
-    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4.5) , Vector3(0.1,0.1,0.1), pWorld, 0.1, 0, 3);   //Object to hang from
-    PBD::CConstantDistanceConstraint<>::Ptr hangConstraint (
-            new PBD::CConstantDistanceConstraint<>(
-                    pWorld->m_particles[0].get(),
-                    pWorld->m_particles[pWorld->m_particles.size()-1].get()
-            )
-    );
-    hangConstraint->setDistanceTolerance(0.5);
-    hangConstraint->setTargetDistance(1.0);
-    pWorld->m_permanentConstraints.push_back(hangConstraint);
-
-    PBD::CConstantDistanceConstraint<>::Ptr hangConstraint2 (
-            new PBD::CConstantDistanceConstraint<>(
-                    pWorld->m_particles[3].get(),
-                    pWorld->m_particles[pWorld->m_particles.size()-1].get()
-            )
-    );
-    hangConstraint2->setDistanceTolerance(0.5);
-    hangConstraint2->setTargetDistance(1.0);
-    pWorld->m_permanentConstraints.push_back(hangConstraint2);
+//    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,4.5) , Vector3(0.1,0.1,0.1), pWorld, 0.1, 0, 3);   //Object to hang from
+//    PBD::CConstantDistanceConstraint<T_real>::Ptr hangConstraint (
+//            new PBD::CConstantDistanceConstraint<>(
+//                    pWorld->m_particles[object1Particle1].get(),
+//                    pWorld->m_particles[pWorld->m_particles.size()-1].get()
+//            )
+//    );
+//    hangConstraint->setDistanceTolerance(0.5);
+//    hangConstraint->setTargetDistance(1.5);
+//    pWorld->m_permanentConstraints.push_back(hangConstraint);
+//
+//
+//    PBD::createParticleSystemSolidCube<T_real>(Vector3(0,0,4.5) , Vector3(0.1,0.1,0.1), pWorld, 0.1, 0, 4);   //Object to hang from
+//    PBD::CConstantDistanceConstraint<T_real>::Ptr hangConstraint2 (
+//            new PBD::CConstantDistanceConstraint<>(
+//                    pWorld->m_particles[object2Particle1].get(),
+//                    pWorld->m_particles[pWorld->m_particles.size()-1].get()
+//            )
+//    );
+//    hangConstraint2->setDistanceTolerance(0.5);
+//    hangConstraint2->setTargetDistance(1.0);
+//    pWorld->m_permanentConstraints.push_back(hangConstraint2);
 
 
 }
