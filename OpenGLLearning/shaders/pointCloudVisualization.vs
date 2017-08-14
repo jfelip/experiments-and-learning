@@ -1,6 +1,6 @@
-// ================
-// Vertex shader:
-// ================
+
+//Shader almost all obtained from https://github.com/tdd11235813/spheres_shader
+
 #version 330 core
 layout (location = 0) in vec3 SpherePosition;
 layout (location = 1) in vec3 SphereColor;

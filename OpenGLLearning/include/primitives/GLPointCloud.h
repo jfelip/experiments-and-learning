@@ -68,27 +68,6 @@ public:
         }
     }
 
-    void setColors( const std::vector<PBD::CParticle<> >& vertices )
-    {
-        m_colors.clear();
-        for (const auto & p:vertices)
-        {
-            if (p.m_collision)
-            {
-                m_colors.push_back( .5 );
-                m_colors.push_back( 0 );
-                m_colors.push_back( 0 );
-            }
-            else
-            {
-                m_colors.push_back( 0 );
-                m_colors.push_back( .5 );
-                m_colors.push_back( 0 );
-            }
-        }
-    }
-
-
     void setTransform( const CTransform<T_real>& transform ) { m_transform = transform;}
 
     void rotate (const T_real r[4])		{m_transform.rotate(r);}

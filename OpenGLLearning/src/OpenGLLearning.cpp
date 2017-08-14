@@ -372,6 +372,14 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
         camera.updateCameraVectors();
         //camera.ProcessMouseMovement(xoffset, yoffset);
     }
+    else if (mouse[1])
+    {
+        xoffset = xpos - lastX;
+        yoffset = ypos - lastY;  // Reversed since y-coordinates go from bottom to left
+
+        camera.Position += camera.Right * xoffset * 0.01f;
+        camera.Position += camera.Up * -yoffset * 0.01f;
+    }
 
     lastX = xpos;
     lastY = ypos;
@@ -390,6 +398,16 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         mouse[0] = false;
     }
 
+    if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS)
+    {
+        mouse[1] = true;
+    }
+
+    if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE)
+    {
+        mouse[1] = false;
+    }
+
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
@@ -406,12 +424,14 @@ void PBDCreateObjects( PBD::CWorld* pWorld )
     std::cout<<"Creating objects"<<std::endl;
 
     //Create cube objects                         position           dimensions             partSize partWeight groupId
-    size_t object1Particle1 = pWorld->m_particles.size();
-    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,1.0,3) , Vector3(0.5,0.8,0.2), pWorld, 0.1, 0.02, 2);
+//    size_t object1Particle1 = pWorld->m_particles.size();
+//    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,1) , Vector3(0.2,0.3,0.3), pWorld, 0.1, 0.02, 2);
 
     size_t object2Particle1 = pWorld->m_particles.size();
-    PBD::createParticleSystemFromASCIIXYZPointCloud(Vector3(.5,.5,2) , std::string("/home/labuser/workspace/data/bun_zipper.xyz"), pWorld, 0.1, 0.02, 1, 4.0);
-    //PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,5) , Vector3(0.2,0.2,0.2), pWorld, 0.1, 0.02, 1);
+    PBD::createParticleSystemFromASCIIXYZPointCloud(Vector3(.5,.5,2) ,
+                                                    std::string("/home/labuser/workspace/data/bun_zipper.xyz"),
+                                                    pWorld, 0.1, 0.02, 1, 5.0);
+//    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,2) , Vector3(0.2,0.3,0.3), pWorld, 0.1, 0.02, 1);
 
     //Create a cube 5x5x0.05 m size with 5cm particles centered at 0,0,0 (This will be the floor)
     PBD::createParticleSystemSolidCube<T_real>(Vector3(0,0,0) , Vector3(2,2,0.1), pWorld, 0.1, 0, 0);
@@ -427,7 +447,7 @@ void PBDCreateObjects( PBD::CWorld* pWorld )
 //    hangConstraint->setDistanceTolerance(0.5);
 //    hangConstraint->setTargetDistance(1.5);
 //    pWorld->m_permanentConstraints.push_back(hangConstraint);
-//
+
 //
 //    PBD::createParticleSystemSolidCube<T_real>(Vector3(0,0,4.5) , Vector3(0.1,0.1,0.1), pWorld, 0.1, 0, 4);   //Object to hang from
 //    PBD::CConstantDistanceConstraint<T_real>::Ptr hangConstraint2 (

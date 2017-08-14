@@ -64,8 +64,6 @@ void addParticleSystemInternalConstraints(
 //        }
 //    }
 
-
-
 }
 
 
@@ -90,7 +88,7 @@ void createParticleSystemSolidCube(
             for (double k = 0; k < dim(2); k+= partSize+epsilon)
             {
                 pWorld->m_particles.emplace_back( PBD::CParticle<>::Ptr(
-                        new PBD::CParticle<T_real>(i+pos(0),j+pos(1),k+pos(2),partWeigth,partSize,partGroup)));
+                        new PBD::CParticle<T_real>(i+pos(0),j+pos(1),k+pos(2),partWeigth,partSize*2,partGroup)));
             }
         }
     }
@@ -126,7 +124,7 @@ void createParticleSystemSolidSphere(
             {
                 if (std::sqrt(i*i+j*j+k*k) <= radius)
                 pWorld->m_particles.emplace_back( PBD::CParticle<>::Ptr(
-                        new PBD::CParticle<T_real>(i+pos(0),j+pos(1),k+pos(2),partWeigth,partSize,partGroup)));
+                        new PBD::CParticle<T_real>(i+pos(0),j+pos(1),k+pos(2),partWeigth,partSize*2,partGroup)));
             }
         }
     }
@@ -196,7 +194,7 @@ void createParticleSystemFromASCIIXYZPointCloud(
 
             pWorld->m_particles.emplace_back(
                     PBD::CParticle<>::Ptr(
-                            new PBD::CParticle<T_real>(x+pos(0),y+pos(1),z+pos(2),partWeigth,partSize,partGroup)
+                            new PBD::CParticle<T_real>(x+pos(0),y+pos(1),z+pos(2),partWeigth,partSize*2,partGroup)
                     )
             );
         }

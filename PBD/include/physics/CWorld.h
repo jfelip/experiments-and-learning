@@ -37,7 +37,9 @@ public:
     void createCollisionConstraints();
     void clearExternalForces();
     bool gaussSeidelSolver();
-    void updatePositionsWithPredPositions(double timeStep);
+    void updatePositionsWithPredPositions();
+    void updateVelocities(double timeStep);
+
 
 
     std::vector<PBD::CParticle<>::Ptr>        m_particles;
@@ -98,37 +100,57 @@ void CWorld::createCollisionConstraints()
 
 void CWorld::step(const double & timeStep, const double & timeout)
 {
-    m_constraints.clear();
-
+    // TIMING VARIABLES
     auto start = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::high_resolution_clock::now() - start;
     double elapsed_seconds = (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()) / double(1000.0);
 
+    // SOLVE CONTACTS FIRST TO PRE-STABILIZE
+    m_constraints.clear();
+    createCollisionConstraints();
+    bool constraintsOK = true;
+    uint i = 0;
+    uint maxIter = 5;
+    do
+    {
+
+        for (auto it = m_constraints.begin(); it < m_constraints.end(); ++it)
+        {
+            (*it)->project();
+            constraintsOK = constraintsOK && (*it)->isPredSatisfied();
+        }
+        ++i;
+    } while(elapsed_seconds < timeout && !constraintsOK && i<maxIter);
+    updatePositionsWithPredPositions();
+
+    // ADD GRAVITY AND PREDICT NEW POSITIONS
     applyGravity();
     symplecticEulerUpdate(timeStep);
     clearExternalForces();
 
+    // SOLVE CONTACT CONSTRAINTS
+    m_constraints.clear();
     createCollisionConstraints();
-    std::cout << "Generated " << m_constraints.size() << " collision constraints" << std::endl;
-
-    bool constraintsOK = false;
-    uint maxIter = 5000;
-    uint i=0;
-
-    while(elapsed_seconds < timeout && !constraintsOK && i<maxIter)
-    {
-        constraintsOK = gaussSeidelSolver();
-        elapsed = std::chrono::high_resolution_clock::now() - start;
-        elapsed_seconds = (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()) / double(1000.0);
-        ++i;
-    }
-    std::cout << "Performed " << i << " Gauss-Seidel iterations." << std::endl;
-
-    constraintsOK = false;
+    constraintsOK = true;
     i = 0;
-    while(elapsed_seconds < timeout && !constraintsOK && i<maxIter)
+    maxIter = 5;
+    do
     {
 
+        for (auto it = m_constraints.begin(); it < m_constraints.end(); ++it)
+        {
+            (*it)->project();
+            constraintsOK = constraintsOK && (*it)->isPredSatisfied();
+        }
+        ++i;
+    } while(elapsed_seconds < timeout && !constraintsOK && i<maxIter);
+
+    // SOLVE SHAPE-MATCHING CONSTRAINTS
+    i = 0;
+    maxIter = 5000;
+    do
+    {
+        constraintsOK = true;
         for( auto it = m_shapeMatchingConstraints.begin(); it<m_shapeMatchingConstraints.end(); ++it)
         {
             constraintsOK = (*it)->project();
@@ -137,10 +159,10 @@ void CWorld::step(const double & timeStep, const double & timeout)
         elapsed = std::chrono::high_resolution_clock::now() - start;
         elapsed_seconds = (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()) / double(1000.0);
         ++i;
-    }
+    } while(elapsed_seconds < timeout && !constraintsOK && i<maxIter);
 
-    updatePositionsWithPredPositions(timeStep);
-
+    updateVelocities(timeStep);
+    updatePositionsWithPredPositions();
 }
 
 void CWorld::clearExternalForces()
@@ -158,28 +180,21 @@ void CWorld::symplecticEulerUpdate( double timeStep )
         (*it)->symplecticEulerUpdate(timeStep);
     }
 }
-void CWorld::updatePositionsWithPredPositions( double timeStep )
+
+void CWorld::updatePositionsWithPredPositions( )
 {
     for( auto it = m_particles.begin(); it<m_particles.end(); ++it)
     {
-        (*it)->updatePositionsWithPredPositions(timeStep);
+        (*it)->updatePositionsWithPredPositions();
     }
 }
 
-bool CWorld::gaussSeidelSolver() {
-    bool res = true;
-
-    for( auto it = m_constraints.begin(); it<m_constraints.end(); ++it)
+void CWorld::updateVelocities( double timeStep )
+{
+    for( auto it = m_particles.begin(); it<m_particles.end(); ++it)
     {
-        res = res && (*it)->project();
+        (*it)->updateVelocity(timeStep);
     }
-
-    for( auto it = m_permanentConstraints.begin(); it<m_permanentConstraints.end(); ++it)
-    {
-        res = res && (*it)->project();
-    }
-
-    return res;
 }
 
 void CWorld::applyGravity()

@@ -12,6 +12,8 @@
 #include <Transform.h>
 #include <physics/CWorld.h>
 
+//TODO: Enable particle-wise sphere radius
+
 template<typename T_real=double, typename T_vertex=GLfloat>
 class CGLParticleSystem
 {
@@ -60,27 +62,6 @@ public:
         }
     }
 
-    void setColors( const std::vector<PBD::CParticle<> >& vertices )
-    {
-        m_colors.clear();
-        for (uint p=0; p<vertices.size() ; ++p)
-        {
-            if (vertices[p].m_collision)
-            {
-                m_colors.push_back( .5 );
-                m_colors.push_back( 0 );
-                m_colors.push_back( 0 );
-            }
-            else
-            {
-                m_colors.push_back( 0 );
-                m_colors.push_back( .5 );
-                m_colors.push_back( 0 );
-            }
-        }
-    }
-
-
     void setTransform( const CTransform<T_real>& transform ) { m_transform = transform;}
 
     void rotate (const T_real r[4])		{m_transform.rotate(r);}
@@ -93,7 +74,7 @@ public:
 
     DRAW_PRIMITIVE getDrawPrimitive( ){ return m_drawPrimitive; }
 
-    bool addEigenVectorsAndCoMtoVertexBuffer( Eigen::Vector3d CoM, Eigen::Matrix3d cov, T_real colorMult = T_real(1.0));
+    bool addEigenVectorsAndCoMtoVertexBuffer( Eigen::Vector3d CoM, Eigen::Matrix3d cov, T_real colorMult = T_real(1.0), const T_real length = T_real(1.0));
 
 protected:
     bool updateBuffersPoints();
@@ -203,6 +184,25 @@ bool CGLParticleSystem<T_real,T_vertex>::updateBuffersPoints()
 		i += 3;
 	}
 
+    //Show shape matching particle positions
+    if (m_drawConstraints)
+    {
+        for (const auto& c:m_pPSystem->m_shapeMatchingConstraints)
+        {
+            for (const auto& p:c->m_shapeMatchingPositions)
+            {
+                Eigen::Vector3d pos = c->getDeformedCovMat() * p + c->getDeformedCoM();
+                m_vertexBufferDataPoints.push_back(pos(0));
+                m_vertexBufferDataPoints.push_back(pos(1));
+                m_vertexBufferDataPoints.push_back(pos(2));
+
+                m_vertexBufferDataPoints.push_back(1);
+                m_vertexBufferDataPoints.push_back(0);
+                m_vertexBufferDataPoints.push_back(0);
+            }
+        }
+    }
+
 
 	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
 	glBindVertexArray(VAO);
@@ -228,6 +228,13 @@ template<class T_real, class T_vertex>
 bool CGLParticleSystem<T_real,T_vertex>::updateConstraintBuffers()
 {
     m_vertexBufferData.clear();
+
+    //CREATE LINES FOR PARTICLE ORIENTATION
+    for (uint p=0; p<m_pPSystem->m_particles.size() ; ++p)
+    {
+        if (m_pPSystem->m_particles[p]->getMass() > 0)
+            addEigenVectorsAndCoMtoVertexBuffer(m_pPSystem->m_particles[p]->m_position, m_pPSystem->m_particles[p]->m_orientation.toRotationMatrix(), 0.5, m_pPSystem->m_particles[p]->m_size );
+    }
 
     //CREATE LINES FOR CONTACT CONSTRAINTS
     for (uint p=0; p<m_pPSystem->m_constraints.size() ; ++p)
@@ -340,7 +347,7 @@ bool CGLParticleSystem<T_real,T_vertex>::updateConstraintBuffers()
 
 
 template<class T_real, class T_vertex>
-bool CGLParticleSystem<T_real,T_vertex>::addEigenVectorsAndCoMtoVertexBuffer( Eigen::Vector3d CoM, Eigen::Matrix3d cov, const T_real colorMult)
+bool CGLParticleSystem<T_real,T_vertex>::addEigenVectorsAndCoMtoVertexBuffer( Eigen::Vector3d CoM, Eigen::Matrix3d cov, const T_real colorMult, const T_real length)
 {
     //Vertex 1 of the first eigenvector
     m_vertexBufferData.push_back( CoM[0] );
@@ -352,9 +359,9 @@ bool CGLParticleSystem<T_real,T_vertex>::addEigenVectorsAndCoMtoVertexBuffer( Ei
     m_vertexBufferData.push_back(0);
 
     //Vertex 2 of the first eigenvector
-    m_vertexBufferData.push_back( cov.col(0)[0] + CoM[0] );
-    m_vertexBufferData.push_back( cov.col(0)[1] + CoM[1] );
-    m_vertexBufferData.push_back( cov.col(0)[2] + CoM[2] );
+    m_vertexBufferData.push_back( cov.col(0)[0] * length + CoM[0] );
+    m_vertexBufferData.push_back( cov.col(0)[1] * length + CoM[1] );
+    m_vertexBufferData.push_back( cov.col(0)[2] * length + CoM[2] );
 
     m_vertexBufferData.push_back(1*colorMult);
     m_vertexBufferData.push_back(0);
@@ -370,9 +377,9 @@ bool CGLParticleSystem<T_real,T_vertex>::addEigenVectorsAndCoMtoVertexBuffer( Ei
     m_vertexBufferData.push_back(0);
 
     //Vertex 2 of the SECOND eigenvector
-    m_vertexBufferData.push_back( cov.col(1)[0] + CoM[0] );
-    m_vertexBufferData.push_back( cov.col(1)[1] + CoM[1] );
-    m_vertexBufferData.push_back( cov.col(1)[2] + CoM[2] );
+    m_vertexBufferData.push_back( cov.col(1)[0] * length + CoM[0] );
+    m_vertexBufferData.push_back( cov.col(1)[1] * length + CoM[1] );
+    m_vertexBufferData.push_back( cov.col(1)[2] * length + CoM[2] );
 
     m_vertexBufferData.push_back(0);
     m_vertexBufferData.push_back(1*colorMult);
@@ -388,9 +395,9 @@ bool CGLParticleSystem<T_real,T_vertex>::addEigenVectorsAndCoMtoVertexBuffer( Ei
     m_vertexBufferData.push_back(1*colorMult);
 
     //Vertex 2 of the THIRD eigenvector
-    m_vertexBufferData.push_back( cov.col(2)[0] + CoM[0] );
-    m_vertexBufferData.push_back( cov.col(2)[1] + CoM[1] );
-    m_vertexBufferData.push_back( cov.col(2)[2] + CoM[2] );
+    m_vertexBufferData.push_back( cov.col(2)[0] * length + CoM[0] );
+    m_vertexBufferData.push_back( cov.col(2)[1] * length + CoM[1] );
+    m_vertexBufferData.push_back( cov.col(2)[2] * length + CoM[2] );
 
     m_vertexBufferData.push_back(0);
     m_vertexBufferData.push_back(0);

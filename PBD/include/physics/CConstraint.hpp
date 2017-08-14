@@ -11,7 +11,7 @@
 
 namespace PBD {
 
-    const static double constraintEpsilon = 0.00001;
+    const static double constraintEpsilon = 0.0001;
 
 template<typename T_real=double>
 class CConstraint
@@ -104,14 +104,17 @@ public:
                 posAdjustmentDir.normalize();
                 if (CConstraint<T_real>::m_particles[0]->getMass()>0 && CConstraint<T_real>::m_particles[1]->getMass()>0)
                 {
-                    CConstraint<T_real>::m_particles[0]->m_predPosition -= posAdjustmentDir * err * 1.0;
-                    CConstraint<T_real>::m_particles[1]->m_predPosition += posAdjustmentDir * err * 1.0;
+                    CConstraint<T_real>::m_particles[0]->m_predPosition -= posAdjustmentDir * err * 0.5;
+                    CConstraint<T_real>::m_particles[1]->m_predPosition += posAdjustmentDir * err * 0.5;
                 }
                 else if (CConstraint<T_real>::m_particles[0]->getMass()>0)
                     CConstraint<T_real>::m_particles[0]->m_predPosition -= posAdjustmentDir * err * 1.0;
                 else if (CConstraint<T_real>::m_particles[1]->getMass()>0)
                     CConstraint<T_real>::m_particles[1]->m_predPosition += posAdjustmentDir * err * 1.0;
             }
+
+            //TODO: Apply friction
+            //TODO: Apply restitution
 
             return isPredSatisfied();
         }
@@ -229,6 +232,9 @@ public:
 
         typedef const std::shared_ptr< CShapeMatchingConstraint > ConstPtr;
 
+        //TODO: Make this parameters global and dependent of the timeStep
+        constexpr static T_real MAX_ANGLE_MAGNITUDE = 0.05;
+        constexpr static T_real MAX_AXIS_DIFF = 0.3;
 
         explicit CShapeMatchingConstraint(const std::vector< PBD::CParticle<>* >& particles)
         {
@@ -238,82 +244,168 @@ public:
             }
             CConstraint<T_real>::m_epsilon = PBD::constraintEpsilon;
 
-            updateRestStates();
-//            computeCovariance(CConstraint<T_real>::m_particles,m_restCovMat);
+            m_restCoM = computeCenterOfMass(CConstraint<T_real>::m_particles);
+            computeRestEigenVectors(CConstraint<T_real>::m_particles,m_restCovMat);
+
+            //Populate target particle positions w.r.t. initial CoM and Orientation
+            for (const auto &p:particles)
+            {
+                T_matrix wMo = m_restCovMat;                //Rotation matrix that converts world coordinates to local frame
+                T_vector pTo = p->m_position - m_restCoM;   //Translation of the point w.r.t. local frame
+                m_shapeMatchingPositions.push_back( wMo.transpose() * pTo ); //Store each particle position w.r.t. local frame
+            }
 
             //Update deformed configuration states
             m_deformedCoM = computePredCenterOfMass(CConstraint<T_real>::m_particles);
-            computeCovariance(CConstraint<T_real>::m_particles,m_deformedCovMat);
+            computeEigenVectors(CConstraint<T_real>::m_particles,m_deformedCovMat);
         }
 
         bool isSatisfied()
         {
-            T_matrix cov, covDiffL2Norm;
-            computeCovariance(CConstraint<T_real>::m_particles,cov);
-            return ( (m_restCovMat - cov).norm() < m_covDistanceThreshold );
+            Eigen::Quaterniond restQuat(m_restCovMat);
+            Eigen::Quaterniond defQuat(m_deformedCovMat);
+            T_real dist = restQuat.angularDistance(defQuat);
+            return ( dist < CConstraint<T_real>::m_epsilon );
         }
 
         bool isPredSatisfied()
         {
-            T_matrix cov, covDiffL2Norm;
-            computeCovariance(CConstraint<T_real>::m_particles,cov);
-            return ( (m_restCovMat - cov).norm() < m_covDistanceThreshold );
+            Eigen::Quaterniond restQuat(m_restCovMat);
+            Eigen::Quaterniond defQuat(m_deformedCovMat);
+            T_real dist = restQuat.angularDistance(defQuat);
+            return ( dist < CConstraint<T_real>::m_epsilon );
+        }
+
+        T_matrix checkAxisPermutation( const T_matrix& oldMat,  const T_matrix& newMat )
+        {
+            T_real threshold = 0.01;
+            T_matrix res;
+
+            for (uint i=0; i<3; ++i)
+            {
+                if ( (oldMat.col(0) - newMat.col(0)).norm() < threshold )
+                {
+                    res.col(i) = oldMat.col(i);
+                }
+                else if ( (oldMat.col(0) - newMat.col(1)).norm() < threshold )
+                {
+                    res.col(i) = oldMat.col(i);
+                }
+                else if ( (oldMat.col(i) - newMat.col(2)).norm() < threshold )
+                {
+                    res.col(i) = oldMat.col(i);
+                }
+                else
+                {
+                    res.col(i) = newMat.col(i);
+                }
+            }
+
+            return res;
+        }
+
+        T_matrix checkAxisInversion( const T_matrix& oldMat,  const T_matrix& newMat )
+        {
+            T_real threshold = 0.01;
+            T_matrix res;
+
+            for (uint i=0; i<3; ++i)
+            {
+                if ( (oldMat.col(0) - newMat.col(0)).norm() > (1+threshold) )
+                {
+                    res.col(i) = oldMat.col(i);
+                }
+                else
+                {
+                    res.col(i) = newMat.col(i);
+                }
+            }
+
+            return res;
         }
 
         bool project()
         {
-            updateRestStates();
-            T_vector c = computePredCenterOfMass(CConstraint<T_real>::m_particles); //CoM in the deformed configuration
-            T_matrix Q;
-            computeCovariance(CConstraint<T_real>::m_particles,Q);              //Eigenvectors of Covariance in the deformed configuration
-
-            //Detect if the rotation matrix has flipped axes
-            T_vector x_axis = (Q.col(0) + m_restCovMat.col(0)) * 0.5;
-            T_vector y_axis = (Q.col(1) + m_restCovMat.col(1)) * 0.5;
-            T_vector z_axis = (Q.col(2) + m_restCovMat.col(2)) * 0.5;
-            if (x_axis.norm() < 0.1)
-            {
-                _GENERIC_ERROR_("X axis might be flipped");
-                Q.col(0) = -Q.col(0);
-            }
-            if (y_axis.norm() < 0.1)
-            {
-                _GENERIC_ERROR_("Y axis might be flipped");
-                Q.col(1) = -Q.col(1);
-            }
-            if (z_axis.norm() < 0.1)
-            {
-                _GENERIC_ERROR_("Z axis might be flipped");
-                Q.col(2) = -Q.col(2);
-            }
-            m_deformedCovMat = Q;
-            m_deformedCoM = c;
+            //Update the rest configuration descriptors
+            m_restCoM = computeCenterOfMass(CConstraint<T_real>::m_particles);
+            T_matrix Q, qtmp;
+            computeRestEigenVectors(CConstraint<T_real>::m_particles,Q);
+            qtmp = checkAxisPermutation( m_restCovMat, Q );
+            m_restCovMat = checkAxisInversion  ( m_restCovMat, qtmp );
 
 
-            //Calculate the rotation w.r.t. covariance matrix in the rest state
-            //Q = m_restCovMat.transpose() * Q;
-            Q = Q * m_restCovMat.transpose();
+//            deltaQ = m_restCovMat.transpose() * Q;
+//            Eigen::Quaterniond quatRest(deltaQ);
+//            T_real distRest = quatRest.angularDistance(Eigen::Quaterniond(1,0,0,0));
+//            if (distRest > MAX_ANGLE_MAGNITUDE)
+//            {
+//                _GENERIC_ERROR_("REST CONFIG UPDATE: Rotation magnitude too big: " + std::to_string(distRest));
+//            }
+//            else
+//            {
+//                m_restCovMat = Q;
+//            }
 
-            Eigen::Quaterniond quat(Q);
-            T_real dist = quat.angularDistance(Eigen::Quaterniond(1,0,0,0));
+            //Update the deformed configuration descriptors
+            m_deformedCoM = computePredCenterOfMass(CConstraint<T_real>::m_particles); //CoM in the deformed configuration
+            computeEigenVectors(CConstraint<T_real>::m_particles,Q);              //Q component of QR decompositions of the Covariance in the deformed configuration
 
-            if (dist > 0.5)
-            {
-                Q.setIdentity();
-                _GENERIC_ERROR_("Rotation magnitude too big: " + std::to_string(dist));
-            }
+            //Calculate the rotation w.r.t. deformed covariance matrix in the previous iteration
+            Q = m_deformedCovMat.transpose() * Q;
+            qtmp = checkAxisPermutation( m_deformedCovMat, Q );
+            m_deformedCovMat = checkAxisInversion  ( m_deformedCovMat, qtmp );
+//            Eigen::Quaterniond quat(Q);
+//            T_real dist = quat.angularDistance(Eigen::Quaterniond(1,0,0,0));
+//
+//            while (dist > MAX_ANGLE_MAGNITUDE)
+//            if (dist > MAX_ANGLE_MAGNITUDE)
+//            {
+//                Q.setIdentity();
+//                quat = quat.slerp(0.5,Eigen::Quaterniond(1,0,0,0));
+//                Q = quat.toRotationMatrix();
+//                dist = quat.angularDistance(Eigen::Quaterniond(1,0,0,0));
+//                _GENERIC_ERROR_("Rotation magnitude too big: " + std::to_string(dist));
+//            }
+//            m_deformedCovMat = m_deformedCovMat * Q;
+//
+//
+//            m_restCovMat = m_restCovMat * Q;
+//
+//            else
+//            {
+//                _GENERIC_DEBUG_("Rotation magnitude: " + std::to_string(dist));
+//            }
 
-
+            uint i = 0;
+            double totalDeltas = 0;
             for (const auto& p:CConstraint<T_real>::m_particles)
             {
-                T_vector x_star = p->m_predPosition;                //particle position in the deformed configuration
-                T_vector ri = x_star - m_restCoM;               //particle offset to the CoM in the rest configuration
-                T_vector posDelta = (Q * ri + c) - x_star;
-                //p->m_predPosition += posDelta;
-                p->m_predPosition = p->m_position + posDelta;
+                //Compute the delta to move each particle to its shape target position in the local frame
+
+                //1 - Convert particle shape target position to world frame
+                T_vector tTw = m_deformedCovMat * m_shapeMatchingPositions[i] + m_deformedCoM;
+
+                //2 - Calculate the delta
+                T_vector deltaWorld = tTw - p->m_predPosition;
+
+                totalDeltas += deltaWorld.norm();
+
+                //3 - Add the delta to the predPosition
+                double stiffness = 1.0; //TODO: Make this a parameter
+                p->m_predPosition = p->m_predPosition + deltaWorld * 1.0;
+                p->m_predOrientation = Eigen::Quaterniond(m_deformedCovMat);
+                ++i;
+
+// POSITION DELTA FROM THE PBD PAPERS
+//                T_vector x_star = p->m_predPosition;            //particle position in the deformed configuration
+//                T_vector ri = x_star - m_restCoM;               //particle offset to the CoM in the rest configuration
+//                T_vector posDelta = (Q * ri + c) - x_star;
+//                //p->m_predPosition += posDelta;
+//                p->m_predPosition = p->m_position + posDelta;
+//                p->m_predOrientation = quat * p->m_orientation;
             }
 
-            //return isPredSatisfied();
+            //return totalDeltas < 0.0001;
             return true;
         }
 
@@ -342,70 +434,65 @@ public:
             return CoM;
         }
 
-        void computeCovariance( const std::vector< PBD::CParticle<>* >& particles, T_matrix& cov )
+        void computeEigenVectors( const std::vector< PBD::CParticle<>* >& particles, T_matrix& eigenvectors )
         {
+            T_vector c = computePredCenterOfMass(CConstraint<T_real>::m_particles);
+            T_matrix cov;
 
             cov.setZero();
-
-            T_vector c = computePredCenterOfMass(CConstraint<T_real>::m_particles);
-
             for (const auto& p:particles)
             {
+                T_matrix A = 0.2*p->getMass()*p->m_size*p->m_predOrientation.toRotationMatrix();
                 T_vector x_star = p->m_predPosition;
                 T_vector ri = x_star - m_restCoM;
                 cov += (x_star - c) * ri.transpose();
+//                cov += A + (x_star - c) * ri.transpose();
             }
 
-            Eigen::FullPivHouseholderQR<Eigen::Matrix3d> solver;
-            solver.compute(cov);
-            cov = solver.matrixQ();
+            Eigen::SelfAdjointEigenSolver<T_matrix> es(cov);
+            cov = es.eigenvectors();
+
+            //Make sure it is a right handed orthonormal basis
+            eigenvectors.col(0) = cov.col(0);                   //x = first eigenvector
+            eigenvectors.col(0).normalize();
+            eigenvectors.col(2) = cov.col(0).cross(cov.col(1)); //z = x*y
+            eigenvectors.col(2).normalize();
+            eigenvectors.col(1) = cov.col(2).cross(cov.col(0)); //y = z*x
+            eigenvectors.col(1).normalize();
+
         }
 
-        void computeRestCovariance( const std::vector< PBD::CParticle<>* >& particles, T_matrix& cov )
+        void computeRestEigenVectors( const std::vector< PBD::CParticle<>* >& particles, T_matrix& eigenvectors )
         {
 
-            cov.setZero();
+            T_matrix cov;
+            cov.setIdentity();
 
             T_vector c = computeCenterOfMass(CConstraint<T_real>::m_particles);
 
             for (const auto& p:particles)
             {
+                T_matrix A = 0.2*p->getMass()*p->m_size*p->m_predOrientation.toRotationMatrix();
                 T_vector x_star = p->m_position;
                 T_vector ri = x_star - m_restCoM;
                 cov += (x_star - c) * ri.transpose();
+//                cov += A + (x_star - c) * ri.transpose();
             }
 
-            Eigen::FullPivHouseholderQR<Eigen::Matrix3d> solver;
-            solver.compute(cov);
-            cov = solver.matrixQ();
-        }
+            Eigen::EigenSolver<T_matrix> es(cov);
+            cov = es.eigenvectors().real();
 
+            //Make sure it is a right handed orthonormal basis
+            eigenvectors.col(0) = cov.col(0);
+            eigenvectors.col(0).normalize();
+            eigenvectors.col(2) = cov.col(0).cross(cov.col(1));
+            eigenvectors.col(2).normalize();
+            eigenvectors.col(1) = cov.col(2).cross(cov.col(0));
+            eigenvectors.col(1).normalize();
 
-        void updateRestStates ()
-        {
-            m_restCoM = computeCenterOfMass(CConstraint<T_real>::m_particles);
-            T_matrix Q;
-            computeRestCovariance(CConstraint<T_real>::m_particles,Q);
-            //Detect if the rotation matrix has flipped axes
-            T_vector x_axis = (Q.col(0) + m_restCovMat.col(0)) * 0.5;
-            T_vector y_axis = (Q.col(1) + m_restCovMat.col(1)) * 0.5;
-            T_vector z_axis = (Q.col(2) + m_restCovMat.col(2)) * 0.5;
-            if (x_axis.norm() < 0.1)
-            {
-                _GENERIC_ERROR_("X axis might be flipped");
-                Q.col(0) = -Q.col(0);
-            }
-            if (y_axis.norm() < 0.1)
-            {
-                _GENERIC_ERROR_("Y axis might be flipped");
-                Q.col(1) = -Q.col(1);
-            }
-            if (z_axis.norm() < 0.1)
-            {
-                _GENERIC_ERROR_("Z axis might be flipped");
-                Q.col(2) = -Q.col(2);
-            }
-            m_restCovMat = Q;
+//            Eigen::FullPivHouseholderQR<Eigen::Matrix3d> solver;
+//            solver.compute(cov);
+//            cov = solver.matrixQ();
         }
 
         T_vector getCoM()    { return m_restCoM; }
@@ -413,12 +500,13 @@ public:
         T_vector getDeformedCoM()    { return m_deformedCoM; }
         T_matrix getDeformedCovMat() { return m_deformedCovMat; }
 
+        std::vector<T_vector> m_shapeMatchingPositions;
+
     protected:
         T_vector m_restCoM;
         T_matrix m_restCovMat;
         T_vector m_deformedCoM;
         T_matrix m_deformedCovMat;
-        T_real   m_covDistanceThreshold;
     };
 
 

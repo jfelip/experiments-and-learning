@@ -1,5 +1,8 @@
 #version 330 core
 
+
+//Shader almost all obtained from https://github.com/tdd11235813/spheres_shader
+
 uniform mat4 projection;
 
 
