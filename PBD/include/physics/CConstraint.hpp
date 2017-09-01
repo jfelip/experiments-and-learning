@@ -252,7 +252,7 @@ public:
             {
                 T_matrix wMo = m_restCovMat;                //Rotation matrix that converts world coordinates to local frame
                 T_vector pTo = p->m_position - m_restCoM;   //Translation of the point w.r.t. local frame
-                m_shapeMatchingPositions.push_back( wMo.transpose() * pTo ); //Store each particle position w.r.t. local frame
+                m_shapeMatchingPositions.push_back( wMo * pTo ); //Store each particle position w.r.t. local frame
             }
 
             //Update deformed configuration states
@@ -333,48 +333,11 @@ public:
             qtmp = checkAxisPermutation( m_restCovMat, Q );
             m_restCovMat = checkAxisInversion  ( m_restCovMat, qtmp );
 
-
-//            deltaQ = m_restCovMat.transpose() * Q;
-//            Eigen::Quaterniond quatRest(deltaQ);
-//            T_real distRest = quatRest.angularDistance(Eigen::Quaterniond(1,0,0,0));
-//            if (distRest > MAX_ANGLE_MAGNITUDE)
-//            {
-//                _GENERIC_ERROR_("REST CONFIG UPDATE: Rotation magnitude too big: " + std::to_string(distRest));
-//            }
-//            else
-//            {
-//                m_restCovMat = Q;
-//            }
-
             //Update the deformed configuration descriptors
-            m_deformedCoM = computePredCenterOfMass(CConstraint<T_real>::m_particles); //CoM in the deformed configuration
-            computeEigenVectors(CConstraint<T_real>::m_particles,Q);              //Q component of QR decompositions of the Covariance in the deformed configuration
-
-            //Calculate the rotation w.r.t. deformed covariance matrix in the previous iteration
-            Q = m_deformedCovMat.transpose() * Q;
+            m_deformedCoM = computePredCenterOfMass(CConstraint<T_real>::m_particles);  //CoM in the deformed configuration
+            computeEigenVectors(CConstraint<T_real>::m_particles,Q);                    //Q component of QR decompositions of the Covariance in the deformed configuration
             qtmp = checkAxisPermutation( m_deformedCovMat, Q );
             m_deformedCovMat = checkAxisInversion  ( m_deformedCovMat, qtmp );
-//            Eigen::Quaterniond quat(Q);
-//            T_real dist = quat.angularDistance(Eigen::Quaterniond(1,0,0,0));
-//
-//            while (dist > MAX_ANGLE_MAGNITUDE)
-//            if (dist > MAX_ANGLE_MAGNITUDE)
-//            {
-//                Q.setIdentity();
-//                quat = quat.slerp(0.5,Eigen::Quaterniond(1,0,0,0));
-//                Q = quat.toRotationMatrix();
-//                dist = quat.angularDistance(Eigen::Quaterniond(1,0,0,0));
-//                _GENERIC_ERROR_("Rotation magnitude too big: " + std::to_string(dist));
-//            }
-//            m_deformedCovMat = m_deformedCovMat * Q;
-//
-//
-//            m_restCovMat = m_restCovMat * Q;
-//
-//            else
-//            {
-//                _GENERIC_DEBUG_("Rotation magnitude: " + std::to_string(dist));
-//            }
 
             uint i = 0;
             double totalDeltas = 0;
@@ -383,7 +346,7 @@ public:
                 //Compute the delta to move each particle to its shape target position in the local frame
 
                 //1 - Convert particle shape target position to world frame
-                T_vector tTw = m_deformedCovMat * m_shapeMatchingPositions[i] + m_deformedCoM;
+                T_vector tTw = m_deformedCovMat.inverse() * m_shapeMatchingPositions[i] + m_deformedCoM;
 
                 //2 - Calculate the delta
                 T_vector deltaWorld = tTw - p->m_predPosition;
@@ -442,24 +405,29 @@ public:
             cov.setZero();
             for (const auto& p:particles)
             {
-                T_matrix A = 0.2*p->getMass()*p->m_size*p->m_predOrientation.toRotationMatrix();
+//                T_matrix A = 0.2*p->getMass()*p->m_size*p->m_predOrientation.toRotationMatrix();
                 T_vector x_star = p->m_predPosition;
-                T_vector ri = x_star - m_restCoM;
+                T_vector ri = x_star - m_deformedCoM;
                 cov += (x_star - c) * ri.transpose();
 //                cov += A + (x_star - c) * ri.transpose();
             }
 
-            Eigen::SelfAdjointEigenSolver<T_matrix> es(cov);
-            cov = es.eigenvectors();
+//            Eigen::SelfAdjointEigenSolver<T_matrix> es(cov);
+//            cov = es.eigenvectors();
+            Eigen::JacobiSVD<T_matrix> svd(cov, Eigen::ComputeFullU | Eigen::ComputeFullV);
+            eigenvectors = svd.matrixU();
 
-            //Make sure it is a right handed orthonormal basis
-            eigenvectors.col(0) = cov.col(0);                   //x = first eigenvector
-            eigenvectors.col(0).normalize();
-            eigenvectors.col(2) = cov.col(0).cross(cov.col(1)); //z = x*y
-            eigenvectors.col(2).normalize();
-            eigenvectors.col(1) = cov.col(2).cross(cov.col(0)); //y = z*x
-            eigenvectors.col(1).normalize();
-
+//            //Normalize cov mat axis
+//            cov.col(0).normalize();
+//            cov.col(1).normalize();
+//            cov.col(2).normalize();
+//
+//            //Construct a right handed orthonormal basis from the covariance matrix axes
+//            eigenvectors.col(0) = cov.col(0);                   //x = first eigenvector
+//            eigenvectors.col(2) = cov.col(0).cross(cov.col(1)); //z = x*y
+//            eigenvectors.col(2).normalize();
+//            eigenvectors.col(1) = cov.col(2).cross(cov.col(0)); //y = z*x
+//            eigenvectors.col(1).normalize();
         }
 
         void computeRestEigenVectors( const std::vector< PBD::CParticle<>* >& particles, T_matrix& eigenvectors )
@@ -479,16 +447,23 @@ public:
 //                cov += A + (x_star - c) * ri.transpose();
             }
 
-            Eigen::EigenSolver<T_matrix> es(cov);
-            cov = es.eigenvectors().real();
+//            Eigen::EigenSolver<T_matrix> es(cov);
+//            cov = es.eigenvectors().real();
+            Eigen::JacobiSVD<T_matrix> svd(cov, Eigen::ComputeFullU | Eigen::ComputeFullV);
+            eigenvectors = svd.matrixU();
 
-            //Make sure it is a right handed orthonormal basis
-            eigenvectors.col(0) = cov.col(0);
-            eigenvectors.col(0).normalize();
-            eigenvectors.col(2) = cov.col(0).cross(cov.col(1));
-            eigenvectors.col(2).normalize();
-            eigenvectors.col(1) = cov.col(2).cross(cov.col(0));
-            eigenvectors.col(1).normalize();
+//            //Normalize cov mat axis
+//            cov.col(0).normalize();
+//            cov.col(1).normalize();
+//            cov.col(2).normalize();
+//
+//            //Make sure it is a right handed orthonormal basis
+//            eigenvectors.col(0) = cov.col(0);
+//            eigenvectors.col(0).normalize();
+//            eigenvectors.col(2) = cov.col(0).cross(cov.col(1));
+//            eigenvectors.col(2).normalize();
+//            eigenvectors.col(1) = cov.col(2).cross(cov.col(0));
+//            eigenvectors.col(1).normalize();
 
 //            Eigen::FullPivHouseholderQR<Eigen::Matrix3d> solver;
 //            solver.compute(cov);

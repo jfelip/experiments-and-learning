@@ -191,10 +191,10 @@ bool CGLParticleSystem<T_real,T_vertex>::updateBuffersPoints()
         {
             for (const auto& p:c->m_shapeMatchingPositions)
             {
-                Eigen::Vector3d pos = c->getDeformedCovMat() * p + c->getDeformedCoM();
+                Eigen::Vector3d pos = c->getDeformedCovMat().inverse() * p + c->getDeformedCoM();
                 m_vertexBufferDataPoints.push_back(pos(0));
                 m_vertexBufferDataPoints.push_back(pos(1));
-                m_vertexBufferDataPoints.push_back(pos(2));
+                m_vertexBufferDataPoints.push_back(pos(2)+1);
 
                 m_vertexBufferDataPoints.push_back(1);
                 m_vertexBufferDataPoints.push_back(0);
@@ -424,7 +424,7 @@ bool CGLParticleSystem<T_real,T_vertex>::draw(Shader *shader, Shader *constraint
     GLuint SphereRadiusLoc = glGetUniformLocation(shader->Program, "SphereRadius");
     GLuint transformLoc = glGetUniformLocation(shader->Program, "model");
     glUniformMatrix4fv(transformLoc, 1,GL_FALSE, m_transform.m_data.m_pMatrix);
-    glUniform1f(SphereRadiusLoc, m_pPSystem->m_particles[0]->m_size/2.0);
+    glUniform1f(SphereRadiusLoc, m_pPSystem->m_particles[0]->m_size); //TODO: Add a 0.5x factor
 
     constraintShader->Use();
     GLuint pointSize = glGetUniformLocation(constraintShader->Program, "pointSize");

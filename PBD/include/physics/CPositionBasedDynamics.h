@@ -23,7 +23,6 @@
 #include <PointSetNode.hpp>
 
 
-
 namespace PBD
 {
 

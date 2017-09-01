@@ -9,7 +9,11 @@
 //TODO LIST!!
 //TODO: Add option for face normal visualization
 //TODO: Orbit-like navigation
+//TODO: Ray-tracing utilities
+//TODO: Focus viewpoint to object
 //TODO: Go through all the project and add the const to the ConstPtr definitons
+//TODO: Scene-graph class + dictionary of objects in the visualization port
+
 
 #include <iostream>
 #include <random>
@@ -430,7 +434,7 @@ void PBDCreateObjects( PBD::CWorld* pWorld )
     size_t object2Particle1 = pWorld->m_particles.size();
     PBD::createParticleSystemFromASCIIXYZPointCloud(Vector3(.5,.5,2) ,
                                                     std::string("/home/labuser/workspace/data/bun_zipper.xyz"),
-                                                    pWorld, 0.1, 0.02, 1, 5.0);
+                                                    pWorld, 0.1, 0.02, 1, 6.0);
 //    PBD::createParticleSystemSolidCube<T_real>(Vector3(0.5,0.5,2) , Vector3(0.2,0.3,0.3), pWorld, 0.1, 0.02, 1);
 
     //Create a cube 5x5x0.05 m size with 5cm particles centered at 0,0,0 (This will be the floor)
